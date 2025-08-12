@@ -27,31 +27,46 @@ const Header = () => {
           <nav className="hidden md:flex items-center space-x-8">
             <button 
               onClick={() => scrollToSection('sobre')}
-              className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+              className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer bg-transparent border-none"
             >
               Sobre
             </button>
             <button 
               onClick={() => scrollToSection('funcionalidades')}
-              className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+              className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer bg-transparent border-none"
             >
               Funcionalidades
             </button>
             <button 
               onClick={() => scrollToSection('tecnologia')}
-              className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+              className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer bg-transparent border-none"
             >
               Tecnologia
             </button>
             <button 
               onClick={() => scrollToSection('contato')}
-              className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+              className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer bg-transparent border-none"
             >
               Contato
             </button>
           </nav>
 
-          <Button variant="default" className="bg-gradient-simple hover:opacity-90 text-primary-foreground font-medium">
+          {/* Mobile Menu Button */}
+          <div className="md:hidden">
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => scrollToSection('funcionalidades')}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              Menu
+            </Button>
+          </div>
+
+          <Button 
+            variant="default" 
+            className="bg-gradient-simple hover:opacity-90 text-primary-foreground font-medium hidden sm:block"
+          >
             Experimentar
           </Button>
         </div>

@@ -42,7 +42,11 @@ const Features = () => {
   ];
 
   return (
-    <section id="funcionalidades" className="py-24 bg-gradient-subtle">
+    <section id="funcionalidades" className="py-24 bg-gradient-subtle relative min-h-screen">
+      {/* Debug indicator - remove later */}
+      <div className="absolute top-4 right-4 bg-primary text-primary-foreground px-3 py-1 rounded text-sm z-10">
+        Seção Funcionalidades
+      </div>
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-6">
