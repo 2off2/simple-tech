@@ -1,6 +1,16 @@
 import { Button } from "@/components/ui/button";
 
 const Header = () => {
+  const scrollToSection = (sectionId: string) => {
+    const element = document.getElementById(sectionId);
+    if (element) {
+      element.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'start'
+      });
+    }
+  };
+
   return (
     <header className="w-full bg-background/95 backdrop-blur-sm border-b border-border sticky top-0 z-50">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -9,35 +19,36 @@ const Header = () => {
             <img 
               src="/lovable-uploads/46ca89a7-72fc-479a-bd07-4512df57ce75.png" 
               alt="Simple.Tech Logo" 
-              className="h-8 w-auto animate-float"
+              className="h-8 w-auto animate-float cursor-pointer"
+              onClick={() => scrollToSection('hero')}
             />
           </div>
           
           <nav className="hidden md:flex items-center space-x-8">
-            <a 
-              href="#sobre" 
-              className="text-muted-foreground hover:text-foreground transition-colors"
+            <button 
+              onClick={() => scrollToSection('sobre')}
+              className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
             >
               Sobre
-            </a>
-            <a 
-              href="#funcionalidades" 
-              className="text-muted-foreground hover:text-foreground transition-colors"
+            </button>
+            <button 
+              onClick={() => scrollToSection('funcionalidades')}
+              className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
             >
               Funcionalidades
-            </a>
-            <a 
-              href="#tecnologia" 
-              className="text-muted-foreground hover:text-foreground transition-colors"
+            </button>
+            <button 
+              onClick={() => scrollToSection('tecnologia')}
+              className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
             >
               Tecnologia
-            </a>
-            <a 
-              href="#contato" 
-              className="text-muted-foreground hover:text-foreground transition-colors"
+            </button>
+            <button 
+              onClick={() => scrollToSection('contato')}
+              className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
             >
               Contato
-            </a>
+            </button>
           </nav>
 
           <Button variant="default" className="bg-gradient-simple hover:opacity-90 text-primary-foreground font-medium">

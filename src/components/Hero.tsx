@@ -3,7 +3,7 @@ import { ArrowRight, Brain, Shield, Zap } from "lucide-react";
 
 const Hero = () => {
   return (
-    <section className="relative min-h-screen flex items-center justify-center bg-gradient-subtle overflow-hidden">
+    <section id="hero" className="relative min-h-screen flex items-center justify-center bg-gradient-subtle overflow-hidden">
       {/* Background decoration */}
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5"></div>
       
