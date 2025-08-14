@@ -12,9 +12,9 @@ const Hero = () => {
           {/* Logo Section */}
           <div className="mb-8 flex justify-center">
             <img 
-              src="/lovable-uploads/46ca89a7-72fc-479a-bd07-4512df57ce75.png" 
+              src="/lovable-uploads/34a7ef60-8f49-4925-bfbb-87137457f2fe.png" 
               alt="Simple.Tech Logo" 
-              className="h-20 w-auto animate-float"
+              className="h-24 w-auto animate-float"
             />
           </div>
 
