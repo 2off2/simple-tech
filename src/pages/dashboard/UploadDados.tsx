@@ -4,14 +4,16 @@ import { Upload, FileText, Check, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
 
-export function UploadDados() {
+interface UploadDadosProps {
+  onUploadSuccess?: () => void;
+}
+
+export function UploadDados({ onUploadSuccess }: UploadDadosProps) {
   const [file, setFile] = useState<File | null>(null);
   const [previewData, setPreviewData] = useState<any[]>([]);
   const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
-  const navigate = useNavigate();
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const uploadedFile = acceptedFiles[0];
@@ -66,7 +68,8 @@ export function UploadDados() {
           title: "Sucesso!",
           description: "Dados enviados e processados com sucesso.",
         });
-        navigate('/dashboard');
+        // Chama callback para indicar sucesso no upload
+        onUploadSuccess?.();
       } else {
         throw new Error('Erro no upload');
       }
