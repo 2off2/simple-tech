@@ -38,6 +38,7 @@ const Hero = () => {
             <Button 
               size="lg" 
               className="bg-gradient-simple hover:opacity-90 text-primary-foreground font-medium shadow-simple group"
+              onClick={() => window.location.href = '/dashboard'}
             >
               Começar Agora
               <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />

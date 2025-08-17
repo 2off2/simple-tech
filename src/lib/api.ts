@@ -1,5 +1,5 @@
-// Configuração da API
-const API_BASE_URL = 'http://localhost:8000'; // Altere para a URL da sua API
+// Configuração da API Simple.Tech
+const API_BASE_URL = 'http://localhost:8000';
 
 class ApiClient {
   private baseURL: string;
@@ -66,17 +66,25 @@ class ApiClient {
 // Instância da API
 export const api = new ApiClient(API_BASE_URL);
 
-// Exemplos de funções específicas para sua API
+// API Simple.Tech
 export const apiService = {
-  // Análise de risco (exemplo)
-  analyzeRisk: async (data: any) => {
-    return api.post('/analyze-risk', data);
+  // Upload de dados CSV
+  uploadCSV: async (file: FormData) => {
+    return api.post('/api/data/upload_csv', file);
   },
   
-  // Buscar dados (exemplo)
-  getData: async (id: string) => {
-    return api.get(`/data/${id}`);
+  // Visualizar dados processados
+  viewProcessed: async () => {
+    return api.get('/api/data/view_processed');
   },
   
-  // Adicione mais métodos conforme sua API
+  // Previsão de fluxo de caixa
+  cashflowPrediction: async (days: number) => {
+    return api.post('/api/predictions/cashflow', { days });
+  },
+  
+  // Simulação de cenários
+  scenarioSimulation: async (entrada_variation: number, saida_variation: number) => {
+    return api.post('/api/simulations/scenarios', { entrada_variation, saida_variation });
+  },
 };
