@@ -23,36 +23,55 @@ export function VisaoGeral() {
         setLoading(true);
         const apiData = await apiService.viewProcessed();
         
-        if (apiData && (apiData as any).data) {
+        if (apiData && Array.isArray(apiData)) {
           // Processar dados da API para o formato esperado
-          const processedData = (apiData as any).data;
+          const processedData = apiData;
           
-          // Calcular métricas
-          const entradas = processedData.filter((item: any) => item.valor > 0);
-          const saidas = processedData.filter((item: any) => item.valor < 0);
+          // Calcular métricas usando as colunas corretas da API
+          const entradas = processedData.filter((item: any) => item.entrada > 0);
+          const saidas = processedData.filter((item: any) => item.saida > 0);
           
-          const totalEntradas = entradas.reduce((sum: number, item: any) => sum + item.valor, 0);
-          const totalSaidas = Math.abs(saidas.reduce((sum: number, item: any) => sum + item.valor, 0));
+          const totalEntradas = entradas.reduce((sum: number, item: any) => sum + item.entrada, 0);
+          const totalSaidas = saidas.reduce((sum: number, item: any) => sum + item.saida, 0);
           const saldoAtual = totalEntradas - totalSaidas;
           
-          // Processar dados temporais se disponíveis
-          const evolucaoSaldo = (apiData as any).saldo_temporal || [];
-          const entradasSaidas = (apiData as any).entradas_saidas || [];
+          // Processar evolução do saldo por data
+          const saldoPorData = new Map();
+          processedData.forEach((item: any) => {
+            const data = item.data;
+            if (!saldoPorData.has(data)) {
+              saldoPorData.set(data, 0);
+            }
+            saldoPorData.set(data, saldoPorData.get(data) + item.saldo);
+          });
+          
+          const evolucaoSaldo = Array.from(saldoPorData.entries())
+            .map(([data, saldo]) => ({ data, saldo }))
+            .sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime());
+
+          // Processar entradas vs saídas por mês
+          const entradasSaidasPorMes = new Map();
+          processedData.forEach((item: any) => {
+            const mes = `${item.ano}-${item.mes.toString().padStart(2, '0')}`;
+            if (!entradasSaidasPorMes.has(mes)) {
+              entradasSaidasPorMes.set(mes, { entradas: 0, saidas: 0 });
+            }
+            const atual = entradasSaidasPorMes.get(mes);
+            atual.entradas += item.entrada;
+            atual.saidas += item.saida;
+          });
+
+          const entradasSaidas = Array.from(entradasSaidasPorMes.entries())
+            .map(([mes, valores]) => ({ mes, ...valores }))
+            .sort((a, b) => a.mes.localeCompare(b.mes));
 
           setData({
             totalEntradas,
             totalSaidas,
             saldoAtual,
             fluxoLiquido: saldoAtual,
-            evolucaoSaldo: evolucaoSaldo.map((item: any) => ({
-              data: item.data || item.periodo,
-              saldo: item.saldo
-            })),
-            entradasSaidas: entradasSaidas.map((item: any) => ({
-              mes: item.periodo,
-              entradas: item.entradas,
-              saidas: Math.abs(item.saidas)
-            }))
+            evolucaoSaldo,
+            entradasSaidas
           });
         }
       } catch (error) {

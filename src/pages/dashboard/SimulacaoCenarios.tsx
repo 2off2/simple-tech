@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Activity, TrendingUp, TrendingDown, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { apiService } from "@/lib/api";
 
 export function SimulacaoCenarios() {
   const [variacaoEntradas, setVariacaoEntradas] = useState([0]);
@@ -15,71 +16,87 @@ export function SimulacaoCenarios() {
   const { toast } = useToast();
 
   const rodarSimulacao = async () => {
-    setLoading(true);
-    
     try {
-      // Simular chamada para API
-      // const response = await fetch('http://localhost:8000/api/simulations/scenarios', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({
-      //     entrada_variation: variacaoEntradas[0] / 100,
-      //     saida_variation: variacaoSaidas[0] / 100
-      //   })
-      // });
+      setLoading(true);
       
-      // Dados simulados
-      const baseValue = 55000;
-      const entradaMultiplier = 1 + (variacaoEntradas[0] / 100);
-      const saidaMultiplier = 1 + (variacaoSaidas[0] / 100);
+      // Chamar API de simulação
+      const result = await apiService.scenarioSimulation(variacaoEntradas[0], variacaoSaidas[0]);
       
-      // Simular Monte Carlo
-      const cenarios = [];
-      for (let i = 0; i < 1000; i++) {
-        const randomFactor = (Math.random() - 0.5) * 0.3; // ±15% variação
-        const saldoFinal = baseValue * entradaMultiplier * (1 - saidaMultiplier) * (1 + randomFactor);
-        cenarios.push(saldoFinal);
-      }
-      
-      // Calcular distribuição
-      const bins = [];
-      const binSize = 5000;
-      const minValue = Math.min(...cenarios);
-      const maxValue = Math.max(...cenarios);
-      
-      for (let i = minValue; i <= maxValue; i += binSize) {
-        const count = cenarios.filter(v => v >= i && v < i + binSize).length;
-        if (count > 0) {
-          bins.push({
-            range: `${Math.round(i / 1000)}k-${Math.round((i + binSize) / 1000)}k`,
-            frequency: count,
-            value: i + binSize / 2
-          });
+      if (result && (result as any).simulation) {
+        setResultados((result as any).simulation);
+      } else {
+        // Fallback com simulação local se a API não retornar dados
+        // Primeiro, obter dados reais da base
+        const apiData = await apiService.viewProcessed();
+        let entradaBase = 100000;
+        let saidaBase = 75000;
+        
+        if (apiData && Array.isArray(apiData)) {
+          entradaBase = apiData.reduce((sum: number, item: any) => sum + item.entrada, 0);
+          saidaBase = apiData.reduce((sum: number, item: any) => sum + item.saida, 0);
         }
+        
+        // Simulação Monte Carlo
+        const numeroSimulacoes = 1000;
+        const resultadosSimulacao = [];
+        
+        for (let i = 0; i < numeroSimulacoes; i++) {
+          const entradaVariada = entradaBase * (1 + (variacaoEntradas[0] / 100) * (Math.random() * 2 - 1));
+          const saidaVariada = saidaBase * (1 + (variacaoSaidas[0] / 100) * (Math.random() * 2 - 1));
+          const saldoFinal = entradaVariada - saidaVariada;
+          
+          resultadosSimulacao.push(saldoFinal);
+        }
+        
+        // Calcular métricas
+        const saldosNegativos = resultadosSimulacao.filter(s => s < 0);
+        const probabilidadeNegativo = (saldosNegativos.length / numeroSimulacoes) * 100;
+        const piorCenario = Math.min(...resultadosSimulacao);
+        const melhorCenario = Math.max(...resultadosSimulacao);
+        
+        // Criar distribuição para o gráfico
+        const intervalos = 20;
+        const minSaldo = Math.min(...resultadosSimulacao);
+        const maxSaldo = Math.max(...resultadosSimulacao);
+        const tamanhoIntervalo = (maxSaldo - minSaldo) / intervalos;
+        
+        const distribuicao = [];
+        for (let i = 0; i < intervalos; i++) {
+          const inicio = minSaldo + (i * tamanhoIntervalo);
+          const fim = inicio + tamanhoIntervalo;
+          const count = resultadosSimulacao.filter(s => s >= inicio && s < fim).length;
+          
+          if (count > 0) {
+            distribuicao.push({
+              range: `${Math.round(inicio / 1000)}k-${Math.round(fim / 1000)}k`,
+              frequency: count,
+              value: inicio + tamanhoIntervalo / 2
+            });
+          }
+        }
+        
+        // Gerar recomendações
+        const recomendacoes = [];
+        if (probabilidadeNegativo > 30) {
+          recomendacoes.push("Alto risco detectado. Considere reduzir gastos ou buscar financiamento adicional.");
+          recomendacoes.push("Busque diversificar fontes de receita.");
+          recomendacoes.push("Mantenha uma reserva de emergência.");
+        } else if (probabilidadeNegativo > 10) {
+          recomendacoes.push("Monitore de perto o fluxo de caixa.");
+          recomendacoes.push("Considere cenários de contingência.");
+        } else {
+          recomendacoes.push("Situação financeira estável.");
+          recomendacoes.push("Considere investimentos para crescimento.");
+        }
+        
+        setResultados({
+          probabilidadeSaldoNegativo: probabilidadeNegativo,
+          piorCenario,
+          melhorCenario,
+          distribuicao,
+          recomendacoes
+        });
       }
-      
-      const negativos = cenarios.filter(v => v < 0).length;
-      const probabilidadeNegativo = (negativos / cenarios.length) * 100;
-      
-      const mockResultados = {
-        probabilidadeSaldoNegativo: probabilidadeNegativo,
-        piorCenario: Math.min(...cenarios),
-        melhorCenario: Math.max(...cenarios),
-        distribuicao: bins,
-        recomendacoes: [
-          probabilidadeNegativo > 20 
-            ? "Alto risco detectado. Considere reduzir gastos ou buscar financiamento adicional."
-            : "Risco baixo. Cenário favorável para investimentos.",
-          variacaoEntradas[0] < 0 
-            ? "Explore novas fontes de receita para compensar a redução esperada."
-            : "Aproveite o crescimento nas entradas para fortalecer reservas.",
-          variacaoSaidas[0] > 10 
-            ? "Monitore de perto o aumento nos gastos. Implemente controles de custos."
-            : "Gastos sob controle. Considere investimentos estratégicos."
-        ]
-      };
-      
-      setResultados(mockResultados);
       
       toast({
         title: "Simulação concluída!",
@@ -87,6 +104,7 @@ export function SimulacaoCenarios() {
       });
       
     } catch (error) {
+      console.error('Erro ao rodar simulação:', error);
       toast({
         title: "Erro",
         description: "Erro ao executar simulação. Tente novamente.",

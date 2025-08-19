@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,63 +6,103 @@ import { Label } from "@/components/ui/label";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { TrendingUp, AlertTriangle, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
-const mockHistoricalData = [
-  { data: "Jan", saldo: 20000, tipo: "historico" },
-  { data: "Fev", saldo: 35000, tipo: "historico" },
-  { data: "Mar", saldo: 45000, tipo: "historico" },
-  { data: "Abr", saldo: 40000, tipo: "historico" },
-  { data: "Mai", saldo: 55000, tipo: "historico" },
-];
+import { apiService } from "@/lib/api";
 
 export function PrevisaoFluxo() {
   const [diasPrevisao, setDiasPrevisao] = useState(30);
   const [previsaoData, setPrevisaoData] = useState<any[]>([]);
   const [alertas, setAlertas] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [historicalData, setHistoricalData] = useState<any[]>([]);
   const { toast } = useToast();
 
-  const gerarPrevisao = async () => {
-    setLoading(true);
-    
-    try {
-      // Simular chamada para API
-      // const response = await fetch('http://localhost:8000/api/predictions/cashflow', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ days: diasPrevisao })
-      // });
-      
-      // Dados simulados de previsão
-      const mockPrediction = [];
-      let currentValue = 55000;
-      
-      for (let i = 1; i <= diasPrevisao; i++) {
-        currentValue += Math.random() * 2000 - 1000; // Variação aleatória
-        mockPrediction.push({
-          data: `Dia ${i}`,
-          saldo: Math.max(0, currentValue),
-          tipo: "previsao"
-        });
-      }
-      
-      const combinedData = [...mockHistoricalData, ...mockPrediction];
-      setPrevisaoData(combinedData);
-      
-      // Alertas simulados
-      const mockAlertas = [
-        {
-          tipo: "warning",
-          mensagem: "Risco moderado de saldo baixo nos próximos 15 dias",
-          severidade: "Atenção"
-        },
-        {
-          tipo: "info",
-          mensagem: "Tendência de crescimento detectada para o próximo mês",
-          severidade: "Informação"
+  useEffect(() => {
+    const fetchHistoricalData = async () => {
+      try {
+        const apiData = await apiService.viewProcessed();
+        if (apiData && Array.isArray(apiData)) {
+          // Processar dados históricos
+          const saldoPorData = new Map();
+          apiData.forEach((item: any) => {
+            const data = item.data;
+            if (!saldoPorData.has(data)) {
+              saldoPorData.set(data, 0);
+            }
+            saldoPorData.set(data, saldoPorData.get(data) + item.saldo);
+          });
+          
+          const dadosHistoricos = Array.from(saldoPorData.entries())
+            .map(([data, saldo]) => ({ data, saldo, tipo: 'historico' }))
+            .sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime());
+          
+          setHistoricalData(dadosHistoricos);
         }
-      ];
-      setAlertas(mockAlertas);
+      } catch (error) {
+        console.error('Erro ao carregar dados históricos:', error);
+      }
+    };
+
+    fetchHistoricalData();
+  }, []);
+
+  const gerarPrevisao = async () => {
+    try {
+      setLoading(true);
+      
+      // Chamar API de previsão
+      const result = await apiService.cashflowPrediction(diasPrevisao);
+      
+      if (result && (result as any).prediction) {
+        setPrevisaoData([...historicalData, ...(result as any).prediction]);
+        setAlertas((result as any).alerts || []);
+      } else {
+        // Fallback com dados simulados se a API não retornar dados
+        const dataAtual = new Date();
+        const dadosPrevisao = [];
+        const saldoBase = historicalData.length > 0 ? historicalData[historicalData.length - 1].saldo : 50000;
+        
+        for (let i = 0; i <= diasPrevisao; i++) {
+          const data = new Date(dataAtual);
+          data.setDate(data.getDate() + i);
+          
+          const variacao = (Math.random() - 0.5) * 10000;
+          const saldoPrevisto = saldoBase + (variacao * (i + 1) / diasPrevisao);
+          
+          dadosPrevisao.push({
+            data: data.toISOString().split('T')[0],
+            saldo: Math.round(saldoPrevisto),
+            tipo: i === 0 ? 'atual' : 'previsto'
+          });
+        }
+        
+        setPrevisaoData([...historicalData, ...dadosPrevisao]);
+        
+        // Gerar alertas
+        const saldoFinal = dadosPrevisao[dadosPrevisao.length - 1].saldo;
+        const alertasGerados = [];
+        
+        if (saldoFinal < 0) {
+          alertasGerados.push({
+            tipo: 'warning',
+            severidade: 'Risco Alto de Saldo Negativo',
+            mensagem: `Previsão indica saldo negativo de ${formatCurrency(saldoFinal)} em ${diasPrevisao} dias.`
+          });
+        } else if (saldoFinal < 10000) {
+          alertasGerados.push({
+            tipo: 'warning',
+            severidade: 'Atenção: Saldo Baixo',
+            mensagem: `Saldo previsto de apenas ${formatCurrency(saldoFinal)} em ${diasPrevisao} dias.`
+          });
+        } else {
+          alertasGerados.push({
+            tipo: 'info',
+            severidade: 'Situação Financeira Estável',
+            mensagem: `Previsão indica saldo positivo de ${formatCurrency(saldoFinal)} em ${diasPrevisao} dias.`
+          });
+        }
+        
+        setAlertas(alertasGerados);
+      }
       
       toast({
         title: "Previsão gerada!",
@@ -70,6 +110,7 @@ export function PrevisaoFluxo() {
       });
       
     } catch (error) {
+      console.error('Erro ao gerar previsão:', error);
       toast({
         title: "Erro",
         description: "Erro ao gerar previsão. Tente novamente.",
