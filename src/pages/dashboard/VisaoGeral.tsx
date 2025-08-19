@@ -2,50 +2,73 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 import { TrendingUp, TrendingDown, DollarSign, Activity } from "lucide-react";
-
-// Dados simulados - substitua pela chamada real da API
-const mockData = {
-  totalEntradas: 150000,
-  totalSaidas: 95000,
-  saldoAtual: 55000,
-  fluxoLiquido: 55000,
-  evolucaoSaldo: [
-    { data: "Jan", saldo: 20000 },
-    { data: "Fev", saldo: 35000 },
-    { data: "Mar", saldo: 45000 },
-    { data: "Abr", saldo: 40000 },
-    { data: "Mai", saldo: 55000 },
-  ],
-  entradasSaidas: [
-    { mes: "Jan", entradas: 25000, saidas: 15000 },
-    { mes: "Fev", entradas: 30000, saidas: 20000 },
-    { mes: "Mar", entradas: 35000, saidas: 25000 },
-    { mes: "Abr", entradas: 30000, saidas: 18000 },
-    { mes: "Mai", entradas: 30000, saidas: 17000 },
-  ]
-};
+import { apiService } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 
 export function VisaoGeral() {
-  const [data, setData] = useState(mockData);
-  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState({
+    totalEntradas: 0,
+    totalSaidas: 0,
+    saldoAtual: 0,
+    fluxoLiquido: 0,
+    evolucaoSaldo: [],
+    entradasSaidas: []
+  });
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
-    // Simular carregamento de dados da API
     const fetchData = async () => {
       try {
         setLoading(true);
-        // const response = await fetch('http://localhost:8000/api/data/view_processed');
-        // const apiData = await response.json();
-        // setData(apiData);
+        const apiData = await apiService.viewProcessed();
+        
+        if (apiData && (apiData as any).data) {
+          // Processar dados da API para o formato esperado
+          const processedData = (apiData as any).data;
+          
+          // Calcular métricas
+          const entradas = processedData.filter((item: any) => item.valor > 0);
+          const saidas = processedData.filter((item: any) => item.valor < 0);
+          
+          const totalEntradas = entradas.reduce((sum: number, item: any) => sum + item.valor, 0);
+          const totalSaidas = Math.abs(saidas.reduce((sum: number, item: any) => sum + item.valor, 0));
+          const saldoAtual = totalEntradas - totalSaidas;
+          
+          // Processar dados temporais se disponíveis
+          const evolucaoSaldo = (apiData as any).saldo_temporal || [];
+          const entradasSaidas = (apiData as any).entradas_saidas || [];
+
+          setData({
+            totalEntradas,
+            totalSaidas,
+            saldoAtual,
+            fluxoLiquido: saldoAtual,
+            evolucaoSaldo: evolucaoSaldo.map((item: any) => ({
+              data: item.data || item.periodo,
+              saldo: item.saldo
+            })),
+            entradasSaidas: entradasSaidas.map((item: any) => ({
+              mes: item.periodo,
+              entradas: item.entradas,
+              saidas: Math.abs(item.saidas)
+            }))
+          });
+        }
       } catch (error) {
         console.error('Erro ao carregar dados:', error);
+        toast({
+          title: "Erro ao carregar dados",
+          description: "Verifique se você fez o upload dos dados corretamente.",
+          variant: "destructive",
+        });
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, []);
+  }, [toast]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {

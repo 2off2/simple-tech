@@ -70,7 +70,11 @@ export const api = new ApiClient(API_BASE_URL);
 export const apiService = {
   // Upload de dados CSV
   uploadCSV: async (file: FormData) => {
-    return api.post('/api/data/upload_csv', file);
+    const response = await fetch(`${API_BASE_URL}/api/data/upload_csv`, {
+      method: 'POST',
+      body: file,
+    });
+    return response.json();
   },
   
   // Visualizar dados processados
