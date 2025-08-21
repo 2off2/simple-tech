@@ -14,7 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      transacoes: {
+        Row: {
+          created_at: string
+          data: string | null
+          data_pagamento: string | null
+          data_vencimento: string | null
+          descricao: string | null
+          entrada: number | null
+          fluxo_diario: number | null
+          id: number
+          id_cliente: string | null
+          saida: number | null
+          saldo: number | null
+          user_id: string | null
+          valor_fatura: number | null
+        }
+        Insert: {
+          created_at?: string
+          data?: string | null
+          data_pagamento?: string | null
+          data_vencimento?: string | null
+          descricao?: string | null
+          entrada?: number | null
+          fluxo_diario?: number | null
+          id?: number
+          id_cliente?: string | null
+          saida?: number | null
+          saldo?: number | null
+          user_id?: string | null
+          valor_fatura?: number | null
+        }
+        Update: {
+          created_at?: string
+          data?: string | null
+          data_pagamento?: string | null
+          data_vencimento?: string | null
+          descricao?: string | null
+          entrada?: number | null
+          fluxo_diario?: number | null
+          id?: number
+          id_cliente?: string | null
+          saida?: number | null
+          saldo?: number | null
+          user_id?: string | null
+          valor_fatura?: number | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
