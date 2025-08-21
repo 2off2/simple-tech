@@ -21,21 +21,19 @@ export function DashboardFlow() {
       <div className="border-b border-border bg-card">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-sm">S</span>
+            <div 
+              className="flex items-center gap-4 cursor-pointer" 
+              onClick={handleBackToHome}
+            >
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden">
+                <img 
+                  src="/lovable-uploads/cb98570b-3eaf-4009-9198-43d180016a3c.png" 
+                  alt="Simple Logo" 
+                  className="w-full h-full object-contain"
+                />
               </div>
               <span className="text-xl font-bold text-foreground">Simple</span>
             </div>
-            
-            <Button
-              variant="outline"
-              onClick={handleBackToHome}
-              className="flex items-center gap-2"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Voltar ao Início
-            </Button>
           </div>
         </div>
       </div>

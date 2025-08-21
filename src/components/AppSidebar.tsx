@@ -22,14 +22,14 @@ import {
 
 const navigationItems = [
   {
-    title: "Visão Geral",
-    url: "/dashboard",
-    icon: BarChart3,
-  },
-  {
     title: "Upload de Dados",
     url: "/dashboard/upload",
     icon: Upload,
+  },
+  {
+    title: "Visão Geral",
+    url: "/dashboard",
+    icon: BarChart3,
   },
   {
     title: "Previsão de Fluxo",
@@ -55,9 +55,16 @@ export function AppSidebar() {
     <Sidebar className={`${collapsed ? "w-14" : "w-60"} bg-sidebar transition-all duration-300`}>
       {/* Header with Logo */}
       <div className="p-4 border-b border-sidebar-border">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-            <span className="text-primary-foreground font-bold text-sm">S</span>
+        <div 
+          className="flex items-center gap-2 cursor-pointer" 
+          onClick={() => window.location.href = '/'}
+        >
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden">
+            <img 
+              src="/lovable-uploads/cb98570b-3eaf-4009-9198-43d180016a3c.png" 
+              alt="Simple Logo" 
+              className="w-full h-full object-contain"
+            />
           </div>
           {!collapsed && (
             <span className="text-xl font-bold text-sidebar-foreground">Simple</span>
