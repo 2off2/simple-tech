@@ -53,14 +53,12 @@ export function AppSidebar() {
             <SidebarMenu className="space-y-1">
               {navigationItems.map((item, index) => <div key={item.title}>
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <NavLink to={item.url} end={item.url === "/dashboard"} className={({
-                    isActive
-                  }) => `flex items-center gap-3 px-4 py-2 transition-colors duration-200 ${isActive ? "text-amber-400" : "text-white hover:text-amber-400"}`}>
-                        <item.icon className="h-5 w-5" />
-                        {!collapsed && <span>{item.title}</span>}
-                      </NavLink>
-                    </SidebarMenuButton>
+                    <NavLink to={item.url} end={item.url === "/dashboard"} className={({
+                  isActive
+                }) => `flex items-center gap-3 px-4 py-2 transition-colors duration-200 ${isActive ? "text-amber-400" : "text-white hover:text-amber-400"}`}>
+                      <item.icon className="h-5 w-5" />
+                      {!collapsed && <span>{item.title}</span>}
+                    </NavLink>
                   </SidebarMenuItem>
                   
                   {/* Separator between items (except for the last one) */}
