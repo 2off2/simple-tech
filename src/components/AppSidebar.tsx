@@ -45,7 +45,7 @@ export function AppSidebar() {
       </div>
 
       {/* Another decorative separator */}
-      <div className="mx-4 h-px bg-sidebar-accent/30 mb-2"></div>
+      
 
       <SidebarContent className="bg-gradient-to-b from-zinc-900 to-zinc-950 border-t border-amber-400/20 shadow-inner">
         <SidebarGroup className="mx-0 my-0 px-[22px] rounded-none">
