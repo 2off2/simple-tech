@@ -35,16 +35,6 @@ export function AppSidebar() {
           {!collapsed && <span className="text-xl font-bold text-sidebar-foreground">Simple</span>}
         </div>
       </div>
-
-      {/* Decorative separator */}
-      
-
-      {/* Toggle Button */}
-      <div className="p-2 bg-zinc-900">
-        <SidebarTrigger className="w-full justify-start hover:bg-sidebar-accent/20 rounded-lg transition-colors text-amber-400" />
-      </div>
-
-      {/* Another decorative separator */}
       
 
       <SidebarContent className="bg-gradient-to-b from-zinc-900 to-zinc-950 border-t border-amber-400/20 shadow-inner">
