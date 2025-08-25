@@ -13,8 +13,15 @@ export function SimpleDashboard() {
         <div className="fixed top-0 left-0 right-0 z-50 bg-card border-b border-border">
           <div className="flex items-center justify-between p-4">
             <div className="flex items-center gap-4">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-sm">S</span>
+              <div 
+                className="w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden cursor-pointer hover:opacity-80 transition-opacity" 
+                onClick={() => window.location.href = '/'}
+              >
+                <img 
+                  src="/lovable-uploads/cb98570b-3eaf-4009-9198-43d180016a3c.png" 
+                  alt="Simple Logo" 
+                  className="w-full h-full object-contain"
+                />
               </div>
               
             </div>
