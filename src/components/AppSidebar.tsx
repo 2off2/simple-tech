@@ -56,11 +56,9 @@ export function AppSidebar() {
                     <SidebarMenuButton asChild>
                       <NavLink to={item.url} end={item.url === "/dashboard"} className={({
                     isActive
-                  }) => `flex items-center gap-3 px-4 py-3 mx-2 transition-colors duration-200 ${isActive ? "text-amber-400" : "text-slate-300 hover:text-amber-400"}`}>
-                        <div className="flex-shrink-0">
-                          <item.icon className="h-5 w-5" />
-                        </div>
-                        {!collapsed && <span className="font-medium">{item.title}</span>}
+                  }) => `flex items-center gap-3 px-4 py-2 transition-colors duration-200 ${isActive ? "text-amber-400" : "text-white hover:text-amber-400"}`}>
+                        <item.icon className="h-5 w-5" />
+                        {!collapsed && <span>{item.title}</span>}
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
