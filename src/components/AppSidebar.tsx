@@ -56,11 +56,11 @@ export function AppSidebar() {
                     <SidebarMenuButton asChild>
                       <NavLink to={item.url} end={item.url === "/dashboard"} className={({
                     isActive
-                  }) => `group flex items-center gap-3 px-4 py-3 mx-2 rounded-lg transition-all duration-300 relative overflow-hidden ${isActive ? "text-amber-400 bg-gradient-to-r from-amber-400/10 to-amber-500/10 border-l-2 border-amber-400" : "text-slate-300 hover:text-amber-300 before:absolute before:inset-0 before:bg-gradient-to-r before:from-amber-400/5 before:to-transparent before:scale-x-0 before:origin-left hover:before:scale-x-100 before:transition-transform before:duration-300"}`}>
+                  }) => `flex items-center gap-3 px-4 py-3 mx-2 transition-colors duration-200 ${isActive ? "text-amber-400" : "text-slate-300 hover:text-amber-400"}`}>
                         <div className="flex-shrink-0">
-                          <item.icon className="h-5 w-5 bg-yellow-400" />
+                          <item.icon className="h-5 w-5" />
                         </div>
-                        {!collapsed && <span className="font-medium text-slate-50">{item.title}</span>}
+                        {!collapsed && <span className="font-medium">{item.title}</span>}
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
