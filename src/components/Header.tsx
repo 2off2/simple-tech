@@ -15,7 +15,7 @@ const Header = () => {
     <header className="w-full bg-background/95 backdrop-blur-sm border-b border-border sticky top-0 z-50">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center">
             <img 
               src="/lovable-uploads/34a7ef60-8f49-4925-bfbb-87137457f2fe.png" 
               alt="Simple.Tech Logo" 
