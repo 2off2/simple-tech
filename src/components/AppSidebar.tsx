@@ -7,7 +7,7 @@ const navigationItems = [{
   url: "/dashboard/upload",
   icon: Upload
 }, {
-  title: "Visão Geral",
+  title: "Dashboard Geral",
   url: "/dashboard",
   icon: BarChart3
 }, {
