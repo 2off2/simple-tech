@@ -68,12 +68,30 @@ export const api = new ApiClient(API_BASE_URL);
 
 // API Simple.Tech
 export const apiService = {
-  // Upload de dados CSV
+  // Upload de dados CSV (legado)
   uploadCSV: async (file: FormData) => {
     const response = await fetch(`${API_BASE_URL}/api/data/upload_csv`, {
       method: 'POST',
       body: file,
     });
+    return response.json();
+  },
+  
+  // Upload bundle - dois arquivos
+  uploadBundle: async (cashflowFile: File, accountingFile: File) => {
+    const formData = new FormData();
+    formData.append('cashflow_file', cashflowFile);
+    formData.append('accounting_file', accountingFile);
+    
+    const response = await fetch(`${API_BASE_URL}/api/data/upload_bundle`, {
+      method: 'POST',
+      body: formData,
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
     return response.json();
   },
   
@@ -90,5 +108,15 @@ export const apiService = {
   // Simulação de cenários
   scenarioSimulation: async (entrada_variation: number, saida_variation: number) => {
     return api.post('/api/simulations/scenarios', { entrada_variation, saida_variation });
+  },
+  
+  // Ciclos operacionais (PME, PMP, PMR)
+  getOperationalCycles: async () => {
+    return api.get('/api/metrics/operational_cycles');
+  },
+  
+  // Importância das features para previsão
+  getFeatureImportance: async () => {
+    return api.get('/api/predictions/cashflow/feature_importance');
   },
 };

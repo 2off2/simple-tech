@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation, NavLink } from "react-router-dom";
-import { BarChart3, Upload, TrendingUp, Activity, Menu } from "lucide-react";
+import { BarChart3, Upload, TrendingUp, Activity, Menu, Clock } from "lucide-react";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 const navigationItems = [{
   title: "Upload de Dados",
@@ -18,6 +18,10 @@ const navigationItems = [{
   title: "Simulação de Cenários",
   url: "/dashboard/simulacao",
   icon: Activity
+}, {
+  title: "Ciclos Operacionais",
+  url: "/dashboard/prazos-medios",
+  icon: Clock
 }];
 export function AppSidebar() {
   const sidebar = useSidebar();

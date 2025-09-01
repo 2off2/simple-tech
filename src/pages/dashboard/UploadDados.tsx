@@ -10,17 +10,25 @@ interface UploadDadosProps {
 }
 
 export function UploadDados({ onUploadSuccess }: UploadDadosProps) {
-  const [file, setFile] = useState<File | null>(null);
+  const [cashflowFile, setCashflowFile] = useState<File | null>(null);
+  const [accountingFile, setAccountingFile] = useState<File | null>(null);
   const [previewData, setPreviewData] = useState<any[]>([]);
   const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
+  const onDropCashflow = useCallback((acceptedFiles: File[]) => {
     const uploadedFile = acceptedFiles[0];
     if (uploadedFile) {
-      setFile(uploadedFile);
+      setCashflowFile(uploadedFile);
+    }
+  }, []);
+
+  const onDropAccounting = useCallback((acceptedFiles: File[]) => {
+    const uploadedFile = acceptedFiles[0];
+    if (uploadedFile) {
+      setAccountingFile(uploadedFile);
       
-      // Simular pré-visualização dos dados
+      // Simular pré-visualização dos dados do arquivo contábil
       const reader = new FileReader();
       reader.onload = (e) => {
         const text = e.target?.result as string;
@@ -39,8 +47,18 @@ export function UploadDados({ onUploadSuccess }: UploadDadosProps) {
     }
   }, []);
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
+  const { getRootProps: getCashflowRootProps, getInputProps: getCashflowInputProps, isDragActive: isCashflowDragActive } = useDropzone({
+    onDrop: onDropCashflow,
+    accept: {
+      'text/csv': ['.csv'],
+      'application/vnd.ms-excel': ['.xls'],
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx']
+    },
+    multiple: false
+  });
+
+  const { getRootProps: getAccountingRootProps, getInputProps: getAccountingInputProps, isDragActive: isAccountingDragActive } = useDropzone({
+    onDrop: onDropAccounting,
     accept: {
       'text/csv': ['.csv'],
       'application/vnd.ms-excel': ['.xls'],
@@ -50,15 +68,23 @@ export function UploadDados({ onUploadSuccess }: UploadDadosProps) {
   });
 
   const handleAnalyze = async () => {
-    if (!file) return;
+    if (!cashflowFile || !accountingFile) {
+      toast({
+        title: "Erro",
+        description: "Por favor, selecione ambos os arquivos antes de prosseguir.",
+        variant: "destructive",
+      });
+      return;
+    }
     
     setUploading(true);
     
     try {
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('cashflow_file', cashflowFile);
+      formData.append('accounting_file', accountingFile);
       
-      const response = await fetch('http://localhost:8000/api/data/upload_csv', {
+      const response = await fetch('http://localhost:8000/api/data/upload_bundle', {
         method: 'POST',
         body: formData,
       });
@@ -66,7 +92,7 @@ export function UploadDados({ onUploadSuccess }: UploadDadosProps) {
       if (response.ok) {
         toast({
           title: "Sucesso!",
-          description: "Dados enviados e processados com sucesso.",
+          description: "Arquivos enviados e processados com sucesso.",
         });
         // Chama callback para indicar sucesso no upload
         onUploadSuccess?.();
@@ -76,7 +102,7 @@ export function UploadDados({ onUploadSuccess }: UploadDadosProps) {
     } catch (error) {
       toast({
         title: "Erro",
-        description: "Erro ao processar o arquivo. Tente novamente.",
+        description: "Erro ao processar os arquivos. Tente novamente.",
         variant: "destructive",
       });
     } finally {
@@ -87,48 +113,96 @@ export function UploadDados({ onUploadSuccess }: UploadDadosProps) {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-foreground">Importe seus dados de fluxo de caixa</h1>
+        <h1 className="text-3xl font-bold text-foreground">Importe seus dados financeiros</h1>
         <p className="text-muted-foreground mt-2">
-          Envie seu arquivo CSV para começar a análise financeira
+          Envie seus arquivos CSV para começar a análise financeira completa
         </p>
       </div>
 
-      {/* Upload Area */}
-      <Card className="max-w-2xl mx-auto">
-        <CardContent className="p-8">
-          <div
-            {...getRootProps()}
-            className={`
-              border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors
-              ${isDragActive ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}
-            `}
-          >
-            <input {...getInputProps()} />
-            <div className="flex flex-col items-center gap-4">
-              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-                <Upload className="h-8 w-8 text-primary" />
+      {/* Upload Areas */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-6xl mx-auto">
+        {/* Fluxo de Caixa */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Arquivo de Fluxo de Caixa (CSV)</CardTitle>
+            <p className="text-sm text-muted-foreground">Regime de Caixa</p>
+          </CardHeader>
+          <CardContent>
+            <div
+              {...getCashflowRootProps()}
+              className={`
+                border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors
+                ${isCashflowDragActive ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}
+              `}
+            >
+              <input {...getCashflowInputProps()} />
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+                  <Upload className="h-6 w-6 text-primary" />
+                </div>
+                
+                {cashflowFile ? (
+                  <div className="flex items-center gap-2 text-primary">
+                    <FileText className="h-4 w-4" />
+                    <span className="font-medium text-sm">{cashflowFile.name}</span>
+                    <Check className="h-4 w-4" />
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-sm font-medium text-foreground mb-1">
+                      {isCashflowDragActive ? 'Solte o arquivo aqui' : 'Arraste e solte o CSV'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      ou clique para selecionar
+                    </p>
+                  </div>
+                )}
               </div>
-              
-              {file ? (
-                <div className="flex items-center gap-2 text-primary">
-                  <FileText className="h-5 w-5" />
-                  <span className="font-medium">{file.name}</span>
-                  <Check className="h-5 w-5" />
-                </div>
-              ) : (
-                <div>
-                  <p className="text-lg font-medium text-foreground mb-2">
-                    {isDragActive ? 'Solte o arquivo aqui' : 'Arraste e solte seu arquivo CSV'}
-                  </p>
-                  <p className="text-muted-foreground">
-                    ou clique para selecionar um arquivo
-                  </p>
-                </div>
-              )}
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+
+        {/* Dados Contábeis */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Arquivo Contábil (CSV)</CardTitle>
+            <p className="text-sm text-muted-foreground">Regime de Competência</p>
+          </CardHeader>
+          <CardContent>
+            <div
+              {...getAccountingRootProps()}
+              className={`
+                border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors
+                ${isAccountingDragActive ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}
+              `}
+            >
+              <input {...getAccountingInputProps()} />
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+                  <Upload className="h-6 w-6 text-primary" />
+                </div>
+                
+                {accountingFile ? (
+                  <div className="flex items-center gap-2 text-primary">
+                    <FileText className="h-4 w-4" />
+                    <span className="font-medium text-sm">{accountingFile.name}</span>
+                    <Check className="h-4 w-4" />
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-sm font-medium text-foreground mb-1">
+                      {isAccountingDragActive ? 'Solte o arquivo aqui' : 'Arraste e solte o CSV'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      ou clique para selecionar
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Preview */}
       {previewData.length > 0 && (
@@ -169,7 +243,7 @@ export function UploadDados({ onUploadSuccess }: UploadDadosProps) {
       )}
 
       {/* Action Button */}
-      {file && (
+      {cashflowFile && accountingFile && (
         <div className="flex justify-center">
           <Button
             onClick={handleAnalyze}

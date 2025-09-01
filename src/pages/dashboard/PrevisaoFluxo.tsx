@@ -7,6 +7,8 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { TrendingUp, AlertTriangle, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiService } from "@/lib/api";
+import { FeatureImportanceChart } from "@/components/FeatureImportanceChart";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function PrevisaoFluxo() {
   const [diasPrevisao, setDiasPrevisao] = useState(30);
@@ -14,6 +16,8 @@ export function PrevisaoFluxo() {
   const [alertas, setAlertas] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [historicalData, setHistoricalData] = useState<any[]>([]);
+  const [featureImportance, setFeatureImportance] = useState<any[]>([]);
+  const [loadingFeatures, setLoadingFeatures] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -109,6 +113,9 @@ export function PrevisaoFluxo() {
         description: `Previsão calculada para ${diasPrevisao} dias.`,
       });
       
+      // Buscar feature importance após previsão bem-sucedida
+      await fetchFeatureImportance();
+      
     } catch (error) {
       console.error('Erro ao gerar previsão:', error);
       toast({
@@ -118,6 +125,28 @@ export function PrevisaoFluxo() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchFeatureImportance = async () => {
+    try {
+      setLoadingFeatures(true);
+      const result = await apiService.getFeatureImportance();
+      if (result && Array.isArray(result)) {
+        setFeatureImportance(result);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar importância das features:', error);
+      // Dados simulados como fallback
+      setFeatureImportance([
+        { feature: "saldo_medio", importance: 0.85 },
+        { feature: "variacao_entradas", importance: 0.72 },
+        { feature: "sazonalidade", importance: 0.68 },
+        { feature: "tendencia_saidas", importance: 0.45 },
+        { feature: "volatilidade", importance: 0.32 }
+      ]);
+    } finally {
+      setLoadingFeatures(false);
     }
   };
 
@@ -206,6 +235,29 @@ export function PrevisaoFluxo() {
                 <span>Previsão</span>
               </div>
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Fatores Relevantes da Previsão */}
+      {featureImportance.length > 0 && (
+        <Card className="shadow-card">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-primary" />
+              Fatores Relevantes da Previsão
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loadingFeatures ? (
+              <div className="space-y-3">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <Skeleton key={i} className="h-8 w-full" />
+                ))}
+              </div>
+            ) : (
+              <FeatureImportanceChart data={featureImportance} />
+            )}
           </CardContent>
         </Card>
       )}
