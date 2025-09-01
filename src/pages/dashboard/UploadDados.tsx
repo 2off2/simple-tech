@@ -1,77 +1,53 @@
 import { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
-import { Upload, FileText, Check, AlertCircle } from "lucide-react";
+import { Upload, FileText, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { apiService } from "@/lib/api";
 
 interface UploadDadosProps {
   onUploadSuccess?: () => void;
 }
 
 export function UploadDados({ onUploadSuccess }: UploadDadosProps) {
-  const [cashflowFile, setCashflowFile] = useState<File | null>(null);
-  const [accountingFile, setAccountingFile] = useState<File | null>(null);
-  const [previewData, setPreviewData] = useState<any[]>([]);
+  const [excelFile, setExcelFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
 
-  const onDropCashflow = useCallback((acceptedFiles: File[]) => {
+  const onDropFile = useCallback((acceptedFiles: File[]) => {
     const uploadedFile = acceptedFiles[0];
     if (uploadedFile) {
-      setCashflowFile(uploadedFile);
-    }
-  }, []);
-
-  const onDropAccounting = useCallback((acceptedFiles: File[]) => {
-    const uploadedFile = acceptedFiles[0];
-    if (uploadedFile) {
-      setAccountingFile(uploadedFile);
+      // Verificar se é arquivo Excel
+      const isExcel = uploadedFile.name.endsWith('.xlsx') || 
+                     uploadedFile.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
       
-      // Simular pré-visualização dos dados do arquivo contábil
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const text = e.target?.result as string;
-        const lines = text.split('\n');
-        const headers = lines[0]?.split(',') || [];
-        const preview = lines.slice(1, 6).map(line => {
-          const values = line.split(',');
-          return headers.reduce((obj, header, index) => ({
-            ...obj,
-            [header]: values[index] || ''
-          }), {});
+      if (!isExcel) {
+        toast({
+          title: "Formato inválido",
+          description: "Por favor, selecione um arquivo Excel (.xlsx).",
+          variant: "destructive",
         });
-        setPreviewData(preview);
-      };
-      reader.readAsText(uploadedFile);
+        return;
+      }
+      
+      setExcelFile(uploadedFile);
     }
-  }, []);
+  }, [toast]);
 
-  const { getRootProps: getCashflowRootProps, getInputProps: getCashflowInputProps, isDragActive: isCashflowDragActive } = useDropzone({
-    onDrop: onDropCashflow,
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop: onDropFile,
     accept: {
-      'text/csv': ['.csv'],
-      'application/vnd.ms-excel': ['.xls'],
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx']
-    },
-    multiple: false
-  });
-
-  const { getRootProps: getAccountingRootProps, getInputProps: getAccountingInputProps, isDragActive: isAccountingDragActive } = useDropzone({
-    onDrop: onDropAccounting,
-    accept: {
-      'text/csv': ['.csv'],
-      'application/vnd.ms-excel': ['.xls'],
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx']
     },
     multiple: false
   });
 
   const handleAnalyze = async () => {
-    if (!cashflowFile || !accountingFile) {
+    if (!excelFile) {
       toast({
         title: "Erro",
-        description: "Por favor, selecione ambos os arquivos antes de prosseguir.",
+        description: "Por favor, selecione o arquivo Excel antes de prosseguir.",
         variant: "destructive",
       });
       return;
@@ -80,29 +56,19 @@ export function UploadDados({ onUploadSuccess }: UploadDadosProps) {
     setUploading(true);
     
     try {
-      const formData = new FormData();
-      formData.append('cashflow_file', cashflowFile);
-      formData.append('accounting_file', accountingFile);
+      await apiService.uploadExcelBundle(excelFile);
       
-      const response = await fetch('http://localhost:8000/api/data/upload_bundle', {
-        method: 'POST',
-        body: formData,
+      toast({
+        title: "Sucesso!",
+        description: "Arquivo enviado e processado com sucesso.",
       });
       
-      if (response.ok) {
-        toast({
-          title: "Sucesso!",
-          description: "Arquivos enviados e processados com sucesso.",
-        });
-        // Chama callback para indicar sucesso no upload
-        onUploadSuccess?.();
-      } else {
-        throw new Error('Erro no upload');
-      }
+      onUploadSuccess?.();
     } catch (error) {
+      console.error('Erro no upload:', error);
       toast({
         title: "Erro",
-        description: "Erro ao processar os arquivos. Tente novamente.",
+        description: "Erro ao processar o arquivo. Verifique se contém as abas 'FluxoDeCaixa' e 'DadosContabeis'.",
         variant: "destructive",
       });
     } finally {
@@ -115,135 +81,66 @@ export function UploadDados({ onUploadSuccess }: UploadDadosProps) {
       <div>
         <h1 className="text-3xl font-bold text-foreground">Importe seus dados financeiros</h1>
         <p className="text-muted-foreground mt-2">
-          Envie seus arquivos CSV para começar a análise financeira completa
+          Envie seu arquivo Excel para começar a análise financeira completa
         </p>
       </div>
 
-      {/* Upload Areas */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-6xl mx-auto">
-        {/* Fluxo de Caixa */}
+      {/* Upload Area */}
+      <div className="max-w-2xl mx-auto">
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Arquivo de Fluxo de Caixa (CSV)</CardTitle>
-            <p className="text-sm text-muted-foreground">Regime de Caixa</p>
+            <CardTitle className="text-lg">Arquivo de Dados da Empresa (.xlsx)</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              O arquivo deve conter duas abas: <strong>FluxoDeCaixa</strong> e <strong>DadosContabeis</strong>
+            </p>
           </CardHeader>
           <CardContent>
             <div
-              {...getCashflowRootProps()}
+              {...getRootProps()}
               className={`
-                border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors
-                ${isCashflowDragActive ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}
+                border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors
+                ${isDragActive ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}
               `}
             >
-              <input {...getCashflowInputProps()} />
-              <div className="flex flex-col items-center gap-3">
-                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-                  <Upload className="h-6 w-6 text-primary" />
+              <input {...getInputProps()} />
+              <div className="flex flex-col items-center gap-4">
+                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
+                  <Upload className="h-8 w-8 text-primary" />
                 </div>
                 
-                {cashflowFile ? (
-                  <div className="flex items-center gap-2 text-primary">
-                    <FileText className="h-4 w-4" />
-                    <span className="font-medium text-sm">{cashflowFile.name}</span>
-                    <Check className="h-4 w-4" />
+                {excelFile ? (
+                  <div className="flex items-center gap-3 text-primary">
+                    <FileText className="h-5 w-5" />
+                    <span className="font-medium">{excelFile.name}</span>
+                    <Check className="h-5 w-5" />
                   </div>
                 ) : (
                   <div>
-                    <p className="text-sm font-medium text-foreground mb-1">
-                      {isCashflowDragActive ? 'Solte o arquivo aqui' : 'Arraste e solte o CSV'}
+                    <p className="text-lg font-medium text-foreground mb-2">
+                      {isDragActive ? 'Solte o arquivo aqui' : 'Arraste e solte seu arquivo Excel'}
                     </p>
-                    <p className="text-xs text-muted-foreground">
-                      ou clique para selecionar
+                    <p className="text-sm text-muted-foreground">
+                      ou clique para selecionar (.xlsx)
                     </p>
                   </div>
                 )}
               </div>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Dados Contábeis */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Arquivo Contábil (CSV)</CardTitle>
-            <p className="text-sm text-muted-foreground">Regime de Competência</p>
-          </CardHeader>
-          <CardContent>
-            <div
-              {...getAccountingRootProps()}
-              className={`
-                border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors
-                ${isAccountingDragActive ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}
-              `}
-            >
-              <input {...getAccountingInputProps()} />
-              <div className="flex flex-col items-center gap-3">
-                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-                  <Upload className="h-6 w-6 text-primary" />
-                </div>
-                
-                {accountingFile ? (
-                  <div className="flex items-center gap-2 text-primary">
-                    <FileText className="h-4 w-4" />
-                    <span className="font-medium text-sm">{accountingFile.name}</span>
-                    <Check className="h-4 w-4" />
-                  </div>
-                ) : (
-                  <div>
-                    <p className="text-sm font-medium text-foreground mb-1">
-                      {isAccountingDragActive ? 'Solte o arquivo aqui' : 'Arraste e solte o CSV'}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      ou clique para selecionar
-                    </p>
-                  </div>
-                )}
-              </div>
+            
+            {/* Instruções */}
+            <div className="mt-4 p-4 bg-muted/50 rounded-lg">
+              <h4 className="font-medium text-foreground mb-2">Estrutura do arquivo Excel:</h4>
+              <ul className="text-sm text-muted-foreground space-y-1">
+                <li>• <strong>Aba "FluxoDeCaixa":</strong> Dados do regime de caixa (entradas e saídas efetivas)</li>
+                <li>• <strong>Aba "DadosContabeis":</strong> Dados do regime de competência (faturamento e custos)</li>
+              </ul>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Preview */}
-      {previewData.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-primary" />
-              Pré-visualização dos dados
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="border-b border-border">
-                    {Object.keys(previewData[0] || {}).map((header) => (
-                      <th key={header} className="text-left p-2 font-medium text-foreground">
-                        {header}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {previewData.map((row, index) => (
-                    <tr key={index} className="border-b border-border/50">
-                      {Object.values(row).map((value, colIndex) => (
-                        <td key={colIndex} className="p-2 text-muted-foreground">
-                          {value as string}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Action Button */}
-      {cashflowFile && accountingFile && (
+      {excelFile && (
         <div className="flex justify-center">
           <Button
             onClick={handleAnalyze}

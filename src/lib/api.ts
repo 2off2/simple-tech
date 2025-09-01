@@ -77,13 +77,30 @@ export const apiService = {
     return response.json();
   },
   
-  // Upload bundle - dois arquivos
+  // Upload bundle - dois arquivos (legado)
   uploadBundle: async (cashflowFile: File, accountingFile: File) => {
     const formData = new FormData();
     formData.append('cashflow_file', cashflowFile);
     formData.append('accounting_file', accountingFile);
     
     const response = await fetch(`${API_BASE_URL}/api/data/upload_bundle`, {
+      method: 'POST',
+      body: formData,
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    return response.json();
+  },
+  
+  // Upload arquivo Excel único
+  uploadExcelBundle: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const response = await fetch(`${API_BASE_URL}/api/data/upload_excel_bundle`, {
       method: 'POST',
       body: formData,
     });
