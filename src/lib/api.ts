@@ -73,6 +73,11 @@ class ApiClient {
 // Instância da API
 export const api = new ApiClient(API_BASE_URL);
 
+// Função de previsão para compatibilidade
+export const predictCashflow = async (params: { future_days: number }): Promise<PredictionData[]> => {
+  return api.post('/api/predictions/cashflow', { days: params.future_days });
+};
+
 // API Simple.Tech
 export const apiService = {
   // Upload de dados CSV (legado)
@@ -129,11 +134,6 @@ export const apiService = {
     return api.post('/api/predictions/cashflow', { days });
   },
   
-  // Função de compatibilidade para o componente PrevisaoFluxo
-  predictCashflow: async (params: { future_days: number }): Promise<PredictionData[]> => {
-    return api.post('/api/predictions/cashflow', { days: params.future_days });
-  },
-  
   // Simulação de cenários
   scenarioSimulation: async (entrada_variation: number, saida_variation: number) => {
     return api.post('/api/simulations/scenarios', { entrada_variation, saida_variation });
@@ -149,6 +149,3 @@ export const apiService = {
     return api.get('/api/predictions/cashflow/feature_importance');
   },
 };
-
-// Exportar funções individuais para compatibilidade
-export const predictCashflow = apiService.predictCashflow;
