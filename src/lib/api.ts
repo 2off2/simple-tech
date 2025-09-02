@@ -1,6 +1,13 @@
 // Configuração da API Simple.Tech
 const API_BASE_URL = 'http://localhost:8000';
 
+// Tipos para as respostas da API
+export interface PredictionData {
+  data: string;
+  fluxo_previsto: number;
+  saldo_previsto: number;
+}
+
 class ApiClient {
   private baseURL: string;
 
@@ -122,6 +129,11 @@ export const apiService = {
     return api.post('/api/predictions/cashflow', { days });
   },
   
+  // Função de compatibilidade para o componente PrevisaoFluxo
+  predictCashflow: async (params: { future_days: number }): Promise<PredictionData[]> => {
+    return api.post('/api/predictions/cashflow', { days: params.future_days });
+  },
+  
   // Simulação de cenários
   scenarioSimulation: async (entrada_variation: number, saida_variation: number) => {
     return api.post('/api/simulations/scenarios', { entrada_variation, saida_variation });
@@ -137,3 +149,6 @@ export const apiService = {
     return api.get('/api/predictions/cashflow/feature_importance');
   },
 };
+
+// Exportar funções individuais para compatibilidade
+export const predictCashflow = apiService.predictCashflow;
