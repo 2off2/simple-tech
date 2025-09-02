@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { predictCashflow, PredictionData } from "@/lib/api";
 import { toast } from "sonner";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -66,12 +68,13 @@ const PredictionResults = ({ data }: { data: PredictionData[] }) => {
 export function PrevisaoFluxo() {
   const [predictionData, setPredictionData] = useState<PredictionData[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [days, setDays] = useState(30);
 
   const handlePredict = async () => {
     setIsLoading(true);
     setPredictionData(null); // Limpa os dados antigos
     try {
-      const data = await predictCashflow({ future_days: 30 });
+      const data = await predictCashflow({ future_days: days });
       // Validação explícita de que a resposta é um array
       if (Array.isArray(data)) {
         setPredictionData(data);
@@ -96,10 +99,24 @@ export function PrevisaoFluxo() {
           <CardTitle>Gerar Previsão de Fluxo de Caixa</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="mb-4">Clique no botão abaixo para treinar o modelo de IA e gerar uma previsão para os próximos 30 dias.</p>
-          <Button onClick={handlePredict} disabled={isLoading}>
-            {isLoading ? "Gerando Previsão..." : "Gerar Previsão de 30 Dias"}
-          </Button>
+          <p className="mb-4">Configure quantos dias deseja prever e clique no botão para treinar o modelo de IA.</p>
+          <div className="space-y-4">
+            <div className="flex items-center space-x-4">
+              <Label htmlFor="days-input">Dias para previsão:</Label>
+              <Input
+                id="days-input"
+                type="number"
+                min="1"
+                max="365"
+                value={days}
+                onChange={(e) => setDays(Number(e.target.value))}
+                className="w-24"
+              />
+            </div>
+            <Button onClick={handlePredict} disabled={isLoading}>
+              {isLoading ? "Gerando Previsão..." : `Gerar Previsão de ${days} Dias`}
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
