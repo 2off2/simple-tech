@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Clock, TrendingUp, TrendingDown } from "lucide-react";
+import { Clock, TrendingUp, TrendingDown, AlertCircle } from "lucide-react";
 import { apiService } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface OperationalCyclesData {
   pmr_dias: number;
@@ -14,19 +15,34 @@ interface OperationalCyclesData {
 export function PrazosMedios() {
   const [data, setData] = useState<OperationalCyclesData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
+        setError(null);
+        
+        console.log("Buscando dados de ciclos operacionais...");
         const apiData = await apiService.getOperationalCycles();
-        setData(apiData as OperationalCyclesData);
+        console.log("Dados recebidos:", apiData);
+        
+        setData(apiData);
+        
+        toast({
+          title: "Dados carregados",
+          description: "Ciclos operacionais carregados com sucesso.",
+        });
+        
       } catch (error) {
         console.error('Erro ao carregar ciclos operacionais:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+        setError(errorMessage);
+        
         toast({
           title: "Erro ao carregar dados",
-          description: "Verifique se você fez o upload dos dados corretamente.",
+          description: "Verifique se você fez o upload do arquivo Excel com a aba 'DadosContabeis'.",
           variant: "destructive",
         });
       } finally {
@@ -65,26 +81,60 @@ export function PrazosMedios() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Análise de Ciclos Operacionais</h1>
+          <p className="text-muted-foreground mt-2">
+            Prazos médios baseados no regime de competência
+          </p>
+        </div>
+        
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            <strong>Dados não encontrados:</strong> {error}
+            <br />
+            <br />
+            Para visualizar os ciclos operacionais, você precisa:
+            <ul className="list-disc list-inside mt-2 space-y-1">
+              <li>Fazer upload de um arquivo Excel (.xlsx)</li>
+              <li>O arquivo deve conter a aba 'DadosContabeis' com as colunas necessárias</li>
+              <li>As colunas obrigatórias são: receita_vendas_a_prazo, contas_a_receber, compras_fornecedores, contas_a_pagar, custo_mercadoria_vendida, estoque_medio</li>
+            </ul>
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
   const metrics = [
     {
       title: "Prazo Médio de Recebimento (PMR)",
       value: data?.pmr_dias || 0,
       icon: TrendingUp,
-      description: "Tempo médio para receber vendas a prazo"
+      description: "Tempo médio para receber vendas a prazo",
+      color: "text-blue-600"
     },
     {
       title: "Prazo Médio de Pagamento (PMP)",
       value: data?.pmp_dias || 0,
       icon: TrendingDown,
-      description: "Tempo médio para pagar fornecedores"
+      description: "Tempo médio para pagar fornecedores",
+      color: "text-green-600"
     },
     {
       title: "Prazo Médio de Estocagem (PME)",
       value: data?.pme_dias || 0,
       icon: Clock,
-      description: "Tempo médio de permanência em estoque"
+      description: "Tempo médio de permanência em estoque",
+      color: "text-orange-600"
     }
   ];
+
+  // Calcular o Ciclo de Conversão de Caixa
+  const cicloConversaoCaixa = (data?.pmr_dias || 0) + (data?.pme_dias || 0) - (data?.pmp_dias || 0);
 
   return (
     <div className="space-y-6">
@@ -105,7 +155,7 @@ export function PrazosMedios() {
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                   {metric.title}
                 </CardTitle>
-                <Icon className="h-4 w-4 text-primary" />
+                <Icon className={`h-4 w-4 ${metric.color}`} />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-foreground mb-1">
@@ -119,6 +169,37 @@ export function PrazosMedios() {
           );
         })}
       </div>
+
+      {/* Ciclo de Conversão de Caixa */}
+      <Card className="shadow-card">
+        <CardHeader>
+          <CardTitle className="text-foreground flex items-center gap-2">
+            <Activity className="h-5 w-5 text-primary" />
+            Ciclo de Conversão de Caixa
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-3xl font-bold text-foreground mb-2">
+            {formatDays(cicloConversaoCaixa)}
+          </div>
+          <p className="text-sm text-muted-foreground mb-4">
+            Tempo total do ciclo financeiro: PMR + PME - PMP
+          </p>
+          <div className="p-4 bg-muted/50 rounded-lg">
+            <p className="text-sm text-muted-foreground">
+              <strong>Interpretação:</strong> {
+                cicloConversaoCaixa < 0 
+                  ? "Excelente! A empresa recebe dos fornecedores antes de precisar pagar, gerando caixa positivo."
+                  : cicloConversaoCaixa < 30
+                  ? "Bom ciclo de caixa. A empresa tem um período relativamente curto entre investir e receber."
+                  : cicloConversaoCaixa < 60
+                  ? "Ciclo moderado. Monitore para possíveis melhorias."
+                  : "Ciclo longo. Considere estratégias para reduzir prazos de recebimento ou aumentar prazos de pagamento."
+              }
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Informações Adicionais */}
       <Card className="shadow-card">
