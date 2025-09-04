@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { predictCashflow, PredictionData } from "@/lib/api";
 import { toast } from "sonner";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart } from 'recharts';
 
 // Componente para evitar renderização condicional complexa
 const PredictionResults = ({ data }: { data: PredictionData[] }) => {
@@ -20,19 +20,86 @@ const PredictionResults = ({ data }: { data: PredictionData[] }) => {
     <>
       <Card>
         <CardHeader>
-          <CardTitle>Gráfico de Previsão de Saldo</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            📊 Evolução do Fluxo de Caixa
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Previsão baseada em inteligência artificial dos próximos dias
+          </p>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={400}>
-            <LineChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="data" tickFormatter={formatDate} />
-              <YAxis tickFormatter={(value) => formatCurrency(value)} />
-              <Tooltip labelFormatter={formatDate} formatter={(value: number) => formatCurrency(value)} />
-              <Legend />
-              <Line type="monotone" dataKey="saldo_previsto" stroke="#8884d8" name="Saldo Previsto" />
-            </LineChart>
+          <ResponsiveContainer width="100%" height={450}>
+            <AreaChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+              <defs>
+                <linearGradient id="colorSaldo" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0.1}/>
+                </linearGradient>
+                <linearGradient id="colorFluxo" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="hsl(var(--secondary))" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="hsl(var(--secondary))" stopOpacity={0.1}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+              <XAxis 
+                dataKey="data" 
+                tickFormatter={(value) => new Date(value).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+                tick={{ fontSize: 12 }}
+                stroke="hsl(var(--muted-foreground))"
+              />
+              <YAxis 
+                tickFormatter={(value) => formatCurrency(value)}
+                tick={{ fontSize: 12 }}
+                stroke="hsl(var(--muted-foreground))"
+                width={100}
+              />
+              <Tooltip 
+                labelFormatter={(value) => `Data: ${formatDate(value)}`}
+                formatter={(value: number, name) => [formatCurrency(value), name]}
+                contentStyle={{
+                  backgroundColor: 'hsl(var(--card))',
+                  border: '1px solid hsl(var(--border))',
+                  borderRadius: '8px',
+                  fontSize: '14px'
+                }}
+              />
+              <Legend 
+                wrapperStyle={{ paddingTop: '20px' }}
+              />
+              <Area 
+                type="monotone" 
+                dataKey="saldo_previsto" 
+                stroke="hsl(var(--primary))" 
+                fill="url(#colorSaldo)"
+                strokeWidth={3}
+                name="💰 Saldo em Caixa"
+                dot={{ fill: 'hsl(var(--primary))', strokeWidth: 2, r: 4 }}
+                activeDot={{ r: 6, stroke: 'hsl(var(--primary))', strokeWidth: 2 }}
+              />
+              <Area 
+                type="monotone" 
+                dataKey="fluxo_previsto" 
+                stroke="hsl(var(--secondary))" 
+                fill="url(#colorFluxo)"
+                strokeWidth={2}
+                name="📈 Fluxo Diário"  
+                dot={{ fill: 'hsl(var(--secondary))', strokeWidth: 2, r: 3 }}
+                activeDot={{ r: 5, stroke: 'hsl(var(--secondary))', strokeWidth: 2 }}
+              />
+            </AreaChart>
           </ResponsiveContainer>
+          <div className="mt-4 p-4 bg-muted/50 rounded-lg">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <div className="flex items-start gap-2">
+                <span className="text-primary font-medium">💰 Saldo em Caixa:</span>
+                <span className="text-muted-foreground">Mostra quanto dinheiro você terá disponível em cada dia</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-secondary font-medium">📈 Fluxo Diário:</span>
+                <span className="text-muted-foreground">Indica se você vai receber (+) ou gastar (-) dinheiro no dia</span>
+              </div>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
