@@ -1,43 +1,99 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { Activity, TrendingUp, TrendingDown, AlertCircle } from "lucide-react";
+import { Activity, TrendingUp, TrendingDown, AlertCircle, Trash2, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiService } from "@/lib/api";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
+interface SeasonalityRule {
+  month: string;
+  revenue_change_percentage: number;
+}
+
 export function SimulacaoCenarios() {
-  const [variacaoEntradas, setVariacaoEntradas] = useState([10]);
-  const [variacaoSaidas, setVariacaoSaidas] = useState([10]);
-  const [diasSimulacao, setDiasSimulacao] = useState(30);
-  const [numSimulacoes, setNumSimulacoes] = useState(1000);
+  const [scenario, setScenario] = useState<"otimista" | "conservador" | "pessimista">("conservador");
+  const [seasonalityRules, setSeasonalityRules] = useState<SeasonalityRule[]>([]);
+  const [selectedMonth, setSelectedMonth] = useState<string>("");
+  const [percentageChange, setPercentageChange] = useState<string>("");
   const [resultados, setResultados] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+
+  const months = [
+    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+  ];
+
+  const addSeasonalityRule = () => {
+    if (!selectedMonth || !percentageChange) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Selecione um mês e digite a variação percentual.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const newRule: SeasonalityRule = {
+      month: selectedMonth,
+      revenue_change_percentage: parseFloat(percentageChange)
+    };
+
+    // Verificar se já existe regra para este mês
+    const existingRuleIndex = seasonalityRules.findIndex(rule => rule.month === selectedMonth);
+    
+    if (existingRuleIndex >= 0) {
+      // Atualizar regra existente
+      const updatedRules = [...seasonalityRules];
+      updatedRules[existingRuleIndex] = newRule;
+      setSeasonalityRules(updatedRules);
+    } else {
+      // Adicionar nova regra
+      setSeasonalityRules([...seasonalityRules, newRule]);
+    }
+
+    // Limpar campos
+    setSelectedMonth("");
+    setPercentageChange("");
+  };
+
+  const removeSeasonalityRule = (index: number) => {
+    const updatedRules = seasonalityRules.filter((_, i) => i !== index);
+    setSeasonalityRules(updatedRules);
+  };
 
   const rodarSimulacao = async () => {
     try {
       setLoading(true);
       
-      console.log("Enviando parâmetros para simulação:", {
-        variacao_entrada: variacaoEntradas[0],
-        variacao_saida: variacaoSaidas[0],
-        dias_simulacao: diasSimulacao,
-        num_simulacoes: numSimulacoes
+      const payload = {
+        scenario_type: scenario,
+        seasonality_rules: seasonalityRules
+      };
+
+      console.log("Enviando payload para simulação:", payload);
+      
+      // Fazer chamada para o novo endpoint
+      const response = await fetch('/api/scenario-simulation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
       });
-      
-      // Chamar API de simulação
-      const result = await apiService.scenarioSimulation(
-        variacaoEntradas[0],
-        variacaoSaidas[0],
-        diasSimulacao,
-        numSimulacoes
-      );
-      
+
+      if (!response.ok) {
+        throw new Error(`Erro na API: ${response.status}`);
+      }
+
+      const result = await response.json();
       console.log("Resultado da simulação:", result);
       
       if (result && result.results_summary) {
@@ -53,7 +109,7 @@ export function SimulacaoCenarios() {
           { range: "Muito Positivo", frequency: (1 - summary.prob_saldo_negativo_final) * 0.2, value: summary.valor_maximo_esperado }
         ].map(item => ({
           ...item,
-          frequency: Math.round(item.frequency * numSimulacoes)
+          frequency: Math.round(item.frequency * 1000) // Assumindo 1000 simulações
         }));
         
         // Gerar recomendações baseadas nos resultados
@@ -91,7 +147,7 @@ export function SimulacaoCenarios() {
         
         toast({
           title: "Simulação concluída!",
-          description: `${numSimulacoes} cenários simulados com sucesso.`,
+          description: `Cenário ${scenario} simulado com sucesso.`,
         });
         
       } else {
@@ -159,77 +215,133 @@ export function SimulacaoCenarios() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Variação Entradas */}
-            <div>
-              <Label className="text-base font-medium">
-                Variação nas Entradas: ±{formatPercentage(variacaoEntradas[0])}
-              </Label>
-              <div className="mt-4">
-                <Slider
-                  value={variacaoEntradas}
-                  onValueChange={setVariacaoEntradas}
-                  max={50}
-                  min={0}
-                  step={1}
-                  className="w-full"
-                />
-                <div className="flex justify-between text-sm text-muted-foreground mt-2">
-                  <span>0%</span>
-                  <span>25%</span>
-                  <span>50%</span>
-                </div>
+          {/* Seleção de Cenário Macroeconômico */}
+          <div>
+            <Label className="text-base font-medium mb-4 block">
+              Selecione o Cenário Macroeconômico
+            </Label>
+            <RadioGroup value={scenario} onValueChange={(value) => setScenario(value as typeof scenario)} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="flex items-center space-x-2 p-4 border rounded-lg hover:bg-muted/50">
+                <RadioGroupItem value="pessimista" id="pessimista" />
+                <Label htmlFor="pessimista" className="font-medium cursor-pointer flex-1">
+                  <div className="flex items-center gap-2">
+                    <TrendingDown className="h-4 w-4 text-destructive" />
+                    Pessimista
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Cenário de baixo crescimento e condições desfavoráveis
+                  </p>
+                </Label>
               </div>
-            </div>
-
-            {/* Variação Saídas */}
-            <div>
-              <Label className="text-base font-medium">
-                Variação nas Saídas: ±{formatPercentage(variacaoSaidas[0])}
-              </Label>
-              <div className="mt-4">
-                <Slider
-                  value={variacaoSaidas}
-                  onValueChange={setVariacaoSaidas}
-                  max={50}
-                  min={0}
-                  step={1}
-                  className="w-full"
-                />
-                <div className="flex justify-between text-sm text-muted-foreground mt-2">
-                  <span>0%</span>
-                  <span>25%</span>
-                  <span>50%</span>
-                </div>
+              <div className="flex items-center space-x-2 p-4 border rounded-lg hover:bg-muted/50">
+                <RadioGroupItem value="conservador" id="conservador" />
+                <Label htmlFor="conservador" className="font-medium cursor-pointer flex-1">
+                  <div className="flex items-center gap-2">
+                    <Activity className="h-4 w-4 text-blue-600" />
+                    Conservador
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Cenário realista baseado em tendências atuais
+                  </p>
+                </Label>
               </div>
-            </div>
+              <div className="flex items-center space-x-2 p-4 border rounded-lg hover:bg-muted/50">
+                <RadioGroupItem value="otimista" id="otimista" />
+                <Label htmlFor="otimista" className="font-medium cursor-pointer flex-1">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4 text-primary" />
+                    Otimista
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Cenário de alto crescimento e condições favoráveis
+                  </p>
+                </Label>
+              </div>
+            </RadioGroup>
           </div>
 
-          {/* Parâmetros Avançados */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="dias-simulacao">Dias para Simular</Label>
-              <Input
-                id="dias-simulacao"
-                type="number"
-                min="7"
-                max="365"
-                value={diasSimulacao}
-                onChange={(e) => setDiasSimulacao(Number(e.target.value))}
-              />
+          {/* Gerenciador de Sazonalidade */}
+          <div>
+            <Label className="text-base font-medium mb-4 block">
+              Adicionar Ajuste Sazonal (Opcional)
+            </Label>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div>
+                <Label htmlFor="month-select" className="text-sm font-medium">Mês</Label>
+                <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                  <SelectTrigger id="month-select">
+                    <SelectValue placeholder="Selecione o mês" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {months.map((month) => (
+                      <SelectItem key={month} value={month}>
+                        {month}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Label htmlFor="percentage-input" className="text-sm font-medium">Variação Percentual da Receita</Label>
+                <Input
+                  id="percentage-input"
+                  type="number"
+                  placeholder="Ex: 25 ou -10"
+                  value={percentageChange}
+                  onChange={(e) => setPercentageChange(e.target.value)}
+                />
+              </div>
+              
+              <div className="flex items-end">
+                <Button 
+                  onClick={addSeasonalityRule}
+                  className="w-full"
+                  variant="outline"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Adicionar
+                </Button>
+              </div>
             </div>
-            <div>
-              <Label htmlFor="num-simulacoes">Número de Simulações</Label>
-              <Input
-                id="num-simulacoes"
-                type="number"
-                min="100"
-                max="10000"
-                step="100"
-                value={numSimulacoes}
-                onChange={(e) => setNumSimulacoes(Number(e.target.value))}
-              />
-            </div>
+
+            {/* Lista de Regras de Sazonalidade */}
+            {seasonalityRules.length > 0 && (
+              <div className="border rounded-lg">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Mês</TableHead>
+                      <TableHead>Variação</TableHead>
+                      <TableHead className="w-20">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {seasonalityRules.map((rule, index) => (
+                      <TableRow key={index}>
+                        <TableCell className="font-medium">{rule.month}</TableCell>
+                        <TableCell>
+                          <span className={rule.revenue_change_percentage >= 0 ? "text-green-600" : "text-red-600"}>
+                            {rule.revenue_change_percentage >= 0 ? "+" : ""}{rule.revenue_change_percentage}%
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeSeasonalityRule(index)}
+                            className="h-8 w-8 p-0"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </div>
 
           <div className="pt-4">
@@ -239,7 +351,7 @@ export function SimulacaoCenarios() {
               size="lg" 
               className="w-full md:w-auto px-8"
             >
-              {loading ? 'Simulando...' : `Rodar ${numSimulacoes.toLocaleString()} Simulações`}
+              {loading ? 'Simulando...' : 'Simular Cenário'}
             </Button>
           </div>
         </CardContent>
@@ -378,10 +490,20 @@ export function SimulacaoCenarios() {
                 <div>
                   <h4 className="font-medium text-foreground mb-3">Parâmetros da Simulação</h4>
                   <div className="space-y-2 text-sm text-muted-foreground">
-                    <div>• {numSimulacoes.toLocaleString()} cenários simulados</div>
-                    <div>• Variação de entradas: ±{variacaoEntradas[0]}%</div>
-                    <div>• Variação de saídas: ±{variacaoSaidas[0]}%</div>
-                    <div>• Período analisado: {diasSimulacao} dias</div>
+                    <div>• Cenário macroeconômico: {scenario.charAt(0).toUpperCase() + scenario.slice(1)}</div>
+                    {seasonalityRules.length > 0 && (
+                      <>
+                        <div>• Ajustes sazonais aplicados:</div>
+                        {seasonalityRules.map((rule, index) => (
+                          <div key={index} className="ml-4">
+                            - {rule.month}: {rule.revenue_change_percentage >= 0 ? "+" : ""}{rule.revenue_change_percentage}%
+                          </div>
+                        ))}
+                      </>
+                    )}
+                    {seasonalityRules.length === 0 && (
+                      <div>• Sem ajustes sazonais aplicados</div>
+                    )}
                   </div>
                 </div>
               </div>
