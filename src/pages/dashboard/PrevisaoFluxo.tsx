@@ -48,6 +48,12 @@ const PredictionResults = ({ data }: { data: PredictionData[] }) => {
                 stroke="hsl(var(--muted-foreground))"
               />
               <YAxis 
+                domain={([dataMin, dataMax]) => {
+                  const range = Math.abs(dataMax - dataMin);
+                  const minRange = Math.max(range * 0.1, Math.abs(dataMin) * 0.05, 1000);
+                  const padding = Math.max(minRange, range * 0.15);
+                  return [dataMin - padding, dataMax + padding];
+                }}
                 tickFormatter={(value) => formatCurrency(value)}
                 tick={{ fontSize: 12 }}
                 stroke="hsl(var(--muted-foreground))"
