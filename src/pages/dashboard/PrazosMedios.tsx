@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Clock, TrendingUp, TrendingDown, AlertCircle } from "lucide-react";
+import { Clock, TrendingUp, TrendingDown, AlertCircle, Activity } from "lucide-react";
 import { apiService } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
