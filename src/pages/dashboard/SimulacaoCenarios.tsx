@@ -98,7 +98,7 @@ export function SimulacaoCenarios() {
       
       if (result && result.results_summary) {
         // Processar os dados para o gráfico (simulação de distribuição)
-        const summary = result.results_summary;
+        const summary = result.simulated_summary;
         
         // Criar distribuição simulada para visualização
         const distribuicao = [
