@@ -81,7 +81,7 @@ export function SimulacaoCenarios() {
       console.log("Enviando payload para simulação:", payload);
       
       // Fazer chamada para o novo endpoint
-      const response = await fetch('/api/scenario-simulation', {
+      const response = await fetch('http://localhost:8000/api/simulations/scenario-simulation', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
