@@ -94,19 +94,20 @@ export function SimulacaoCenarios() {
       }
 
       const result = await response.json();
-      console.log("Resultado da simulação:", result);
+      console.log("Resultado completo da simulação:", JSON.stringify(result, null, 2));
       
-      if (result && result.results_summary) {
-        // Processar os dados para o gráfico (simulação de distribuição)
-        const summary = result.simulated_summary;
+      // Verificar se a resposta tem a estrutura esperada
+      if (result && result.success && result.summary) {
+        const summary = result.summary;
+        console.log("Summary processado:", summary);
         
         // Criar distribuição simulada para visualização
         const distribuicao = [
-          { range: "Muito Negativo", frequency: summary.prob_saldo_negativo_final * 0.3, value: summary.valor_minimo_esperado },
-          { range: "Negativo", frequency: summary.prob_saldo_negativo_final * 0.7, value: summary.valor_minimo_esperado * 0.5 },
-          { range: "Neutro", frequency: (1 - summary.prob_saldo_negativo_final) * 0.4, value: 0 },
-          { range: "Positivo", frequency: (1 - summary.prob_saldo_negativo_final) * 0.4, value: summary.valor_mediano_esperado },
-          { range: "Muito Positivo", frequency: (1 - summary.prob_saldo_negativo_final) * 0.2, value: summary.valor_maximo_esperado }
+          { range: "Muito Negativo", frequency: (summary.prob_saldo_negativo || 0) * 0.3, value: summary.fluxo_minimo || 0 },
+          { range: "Negativo", frequency: (summary.prob_saldo_negativo || 0) * 0.7, value: (summary.fluxo_minimo || 0) * 0.5 },
+          { range: "Neutro", frequency: (1 - (summary.prob_saldo_negativo || 0)) * 0.4, value: 0 },
+          { range: "Positivo", frequency: (1 - (summary.prob_saldo_negativo || 0)) * 0.4, value: summary.fluxo_mediano || 0 },
+          { range: "Muito Positivo", frequency: (1 - (summary.prob_saldo_negativo || 0)) * 0.2, value: summary.fluxo_maximo || 0 }
         ].map(item => ({
           ...item,
           frequency: Math.round(item.frequency * 1000) // Assumindo 1000 simulações
@@ -114,7 +115,7 @@ export function SimulacaoCenarios() {
         
         // Gerar recomendações baseadas nos resultados
         const recomendacoes = [];
-        const probNegativo = summary.prob_saldo_negativo_final * 100;
+        const probNegativo = (summary.prob_saldo_negativo || 0) * 100;
         
         if (probNegativo > 30) {
           recomendacoes.push("Alto risco detectado. Considere reduzir gastos ou buscar financiamento adicional.");
@@ -137,9 +138,9 @@ export function SimulacaoCenarios() {
         
         setResultados({
           probabilidadeSaldoNegativo: probNegativo,
-          piorCenario: summary.valor_minimo_esperado,
-          melhorCenario: summary.valor_maximo_esperado,
-          cenarioMedio: summary.valor_mediano_esperado,
+          piorCenario: summary.fluxo_minimo || 0,
+          melhorCenario: summary.fluxo_maximo || 0,
+          cenarioMedio: summary.fluxo_mediano || 0,
           distribuicao,
           recomendacoes,
           detalhes: summary
@@ -151,7 +152,8 @@ export function SimulacaoCenarios() {
         });
         
       } else {
-        throw new Error("Formato de resposta inválido da API");
+        console.error("Estrutura de resposta inválida:", result);
+        throw new Error("Estrutura de resposta inválida da API");
       }
       
     } catch (error) {
