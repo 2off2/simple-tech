@@ -1,6 +1,9 @@
 import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 
 const Header = () => {
+  const navigate = useNavigate();
+  
   const scrollToSection = (sectionId: string) => {
     const element = document.getElementById(sectionId);
     if (element) {
@@ -66,6 +69,7 @@ const Header = () => {
           <Button 
             variant="default" 
             className="bg-gradient-simple hover:opacity-90 text-primary-foreground font-medium hidden sm:block"
+            onClick={() => navigate("/auth")}
           >
             Login
           </Button>
