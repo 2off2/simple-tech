@@ -67,7 +67,7 @@ const Header = () => {
             variant="default" 
             className="bg-gradient-simple hover:opacity-90 text-primary-foreground font-medium hidden sm:block"
           >
-            Experimentar
+            cadastro
           </Button>
         </div>
       </div>
