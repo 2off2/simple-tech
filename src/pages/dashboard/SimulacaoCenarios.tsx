@@ -97,17 +97,22 @@ export function SimulacaoCenarios() {
       console.log("Resultado completo da simulação:", JSON.stringify(result, null, 2));
       
       // Verificar se a resposta tem a estrutura esperada
-      if (result && result.success && result.summary) {
-        const summary = result.summary;
+      if (result && result.simulated_summary) {
+        const summary = result.simulated_summary;
         console.log("Summary processado:", summary);
+        
+        // Calcular probabilidade de fluxo negativo baseado nos dados
+        const mesesNegativos = summary.meses_com_fluxo_negativo || 0;
+        const totalMeses = 12;
+        const probSaldoNegativo = mesesNegativos / totalMeses;
         
         // Criar distribuição simulada para visualização
         const distribuicao = [
-          { range: "Muito Negativo", frequency: (summary.prob_saldo_negativo || 0) * 0.3, value: summary.fluxo_minimo || 0 },
-          { range: "Negativo", frequency: (summary.prob_saldo_negativo || 0) * 0.7, value: (summary.fluxo_minimo || 0) * 0.5 },
-          { range: "Neutro", frequency: (1 - (summary.prob_saldo_negativo || 0)) * 0.4, value: 0 },
-          { range: "Positivo", frequency: (1 - (summary.prob_saldo_negativo || 0)) * 0.4, value: summary.fluxo_mediano || 0 },
-          { range: "Muito Positivo", frequency: (1 - (summary.prob_saldo_negativo || 0)) * 0.2, value: summary.fluxo_maximo || 0 }
+          { range: "Muito Negativo", frequency: probSaldoNegativo * 0.3, value: summary.menor_fluxo_mensal || 0 },
+          { range: "Negativo", frequency: probSaldoNegativo * 0.7, value: (summary.menor_fluxo_mensal || 0) * 0.5 },
+          { range: "Neutro", frequency: (1 - probSaldoNegativo) * 0.4, value: 0 },
+          { range: "Positivo", frequency: (1 - probSaldoNegativo) * 0.4, value: summary.media_mensal_fluxo || 0 },
+          { range: "Muito Positivo", frequency: (1 - probSaldoNegativo) * 0.2, value: summary.maior_fluxo_mensal || 0 }
         ].map(item => ({
           ...item,
           frequency: Math.round(item.frequency * 1000) // Assumindo 1000 simulações
@@ -115,7 +120,7 @@ export function SimulacaoCenarios() {
         
         // Gerar recomendações baseadas nos resultados
         const recomendacoes = [];
-        const probNegativo = (summary.prob_saldo_negativo || 0) * 100;
+        const probNegativo = probSaldoNegativo * 100;
         
         if (probNegativo > 30) {
           recomendacoes.push("Alto risco detectado. Considere reduzir gastos ou buscar financiamento adicional.");
@@ -138,9 +143,9 @@ export function SimulacaoCenarios() {
         
         setResultados({
           probabilidadeSaldoNegativo: probNegativo,
-          piorCenario: summary.fluxo_minimo || 0,
-          melhorCenario: summary.fluxo_maximo || 0,
-          cenarioMedio: summary.fluxo_mediano || 0,
+          piorCenario: summary.menor_fluxo_mensal || 0,
+          melhorCenario: summary.maior_fluxo_mensal || 0,
+          cenarioMedio: summary.media_mensal_fluxo || 0,
           distribuicao,
           recomendacoes,
           detalhes: summary
@@ -153,7 +158,7 @@ export function SimulacaoCenarios() {
         
       } else {
         console.error("Estrutura de resposta inválida:", result);
-        throw new Error("Estrutura de resposta inválida da API");
+        throw new Error("Estrutura de resposta inválida da API - esperado 'simulated_summary'");
       }
       
     } catch (error) {
