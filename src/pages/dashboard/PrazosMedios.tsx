@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Clock, TrendingUp, TrendingDown, AlertCircle, Activity } from "lucide-react";
+import { Clock, TrendingUp, TrendingDown, AlertCircle, Activity, BarChart3 } from "lucide-react";
 import { apiService } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 
 interface OperationalCyclesData {
   pmr_dias: number;
@@ -136,6 +138,43 @@ export function PrazosMedios() {
   // Calcular o Ciclo de Conversão de Caixa
   const cicloConversaoCaixa = (data?.pmr_dias || 0) + (data?.pme_dias || 0) - (data?.pmp_dias || 0);
 
+  // Dados para o gráfico comparativo
+  const chartData = [
+    {
+      name: "PMR",
+      fullName: "Prazo Médio Recebimento",
+      value: data?.pmr_dias || 0,
+      fill: "hsl(var(--chart-1))"
+    },
+    {
+      name: "PMP", 
+      fullName: "Prazo Médio Pagamento",
+      value: data?.pmp_dias || 0,
+      fill: "hsl(var(--chart-2))"
+    },
+    {
+      name: "PME",
+      fullName: "Prazo Médio Estocagem", 
+      value: data?.pme_dias || 0,
+      fill: "hsl(var(--chart-3))"
+    }
+  ];
+
+  const chartConfig = {
+    PMR: {
+      label: "Prazo Médio Recebimento",
+      color: "hsl(var(--chart-1))"
+    },
+    PMP: {
+      label: "Prazo Médio Pagamento", 
+      color: "hsl(var(--chart-2))"
+    },
+    PME: {
+      label: "Prazo Médio Estocagem",
+      color: "hsl(var(--chart-3))"
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -169,6 +208,56 @@ export function PrazosMedios() {
           );
         })}
       </div>
+
+      {/* Gráfico Comparativo */}
+      <Card className="shadow-card">
+        <CardHeader>
+          <CardTitle className="text-foreground flex items-center gap-2">
+            <BarChart3 className="h-5 w-5 text-primary" />
+            Comparativo dos Ciclos Operacionais
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ChartContainer config={chartConfig} className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis 
+                  dataKey="name" 
+                  className="text-muted-foreground"
+                  tick={{ fontSize: 12 }}
+                />
+                <YAxis 
+                  className="text-muted-foreground"
+                  tick={{ fontSize: 12 }}
+                  label={{ value: 'Dias', angle: -90, position: 'insideLeft' }}
+                />
+                <ChartTooltip 
+                  content={
+                    <ChartTooltipContent 
+                      formatter={(value, name) => [
+                        `${Number(value).toFixed(1)} dias`,
+                        chartData.find(item => item.name === name)?.fullName || name
+                      ]}
+                    />
+                  }
+                />
+                <Bar 
+                  dataKey="value" 
+                  fill="var(--color-value)"
+                  radius={[4, 4, 0, 0]}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </ChartContainer>
+          <div className="mt-4 text-sm text-muted-foreground">
+            <p>
+              <strong>Análise:</strong> O gráfico mostra a comparação entre os três prazos operacionais. 
+              Idealmente, PMR e PME devem ser menores, enquanto PMP pode ser maior para otimizar o fluxo de caixa.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Ciclo de Conversão de Caixa */}
       <Card className="shadow-card">
