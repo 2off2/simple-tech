@@ -144,19 +144,19 @@ export function PrazosMedios() {
       name: "PMR",
       fullName: "Prazo Médio Recebimento",
       value: data?.pmr_dias || 0,
-      fill: "hsl(var(--chart-1))"
+      fill: "#3b82f6"
     },
     {
       name: "PMP", 
       fullName: "Prazo Médio Pagamento",
       value: data?.pmp_dias || 0,
-      fill: "hsl(var(--chart-2))"
+      fill: "#22c55e"
     },
     {
       name: "PME",
       fullName: "Prazo Médio Estocagem", 
       value: data?.pme_dias || 0,
-      fill: "hsl(var(--chart-3))"
+      fill: "#f97316"
     }
   ];
 
@@ -244,7 +244,6 @@ export function PrazosMedios() {
                 />
                 <Bar 
                   dataKey="value" 
-                  fill="var(--color-value)"
                   radius={[4, 4, 0, 0]}
                 />
               </BarChart>
