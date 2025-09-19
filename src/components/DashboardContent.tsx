@@ -12,6 +12,10 @@ export function DashboardContent() {
         <Route path="/upload" element={<UploadDados />} />
         <Route path="/previsao" element={<PrevisaoFluxo />} />
         <Route path="/simulacao" element={<SimulacaoCenarios />} />
+        <Route path="/dashboard" element={<VisaoGeral />} />
+        <Route path="/dashboard/upload" element={<UploadDados />} />
+        <Route path="/dashboard/previsao" element={<PrevisaoFluxo />} />
+        <Route path="/dashboard/simulacao" element={<SimulacaoCenarios />} />
       </Routes>
     </div>
   );

@@ -40,6 +40,7 @@ export function SimulacaoCenarios() {
   // Estados compartilhados
   const [resultados, setResultados] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [apiStatus, setApiStatus] = useState<'checking' | 'online' | 'offline'>('checking');
   const { toast } = useToast();
 
   const months = [
@@ -49,15 +50,47 @@ export function SimulacaoCenarios() {
 
   // Carregar eventos de negócio quando mudar para a aba de eventos
   useEffect(() => {
+    console.log('useEffect executado:', { activeTab, keyBusinessEvents: !!keyBusinessEvents });
     if (activeTab === "business_events" && !keyBusinessEvents) {
+      console.log('Carregando eventos de negócio...');
       loadKeyBusinessEvents();
+    } else {
+      console.log('Não carregando eventos:', { 
+        activeTab, 
+        keyBusinessEvents: !!keyBusinessEvents,
+        condition1: activeTab === "business_events",
+        condition2: !keyBusinessEvents
+      });
     }
   }, [activeTab, keyBusinessEvents]);
+
+  // Verificar saúde da API ao carregar o componente
+  useEffect(() => {
+    const checkApiHealth = async () => {
+      try {
+        console.log('Verificando saúde da API...');
+        setApiStatus('checking');
+        const health = await apiService.healthCheck();
+        console.log('API Health:', health);
+        setApiStatus('online');
+      } catch (error) {
+        console.error('Erro ao verificar saúde da API:', error);
+        setApiStatus('offline');
+      }
+    };
+    checkApiHealth();
+  }, []);
 
   const loadKeyBusinessEvents = async () => {
     try {
       setLoadingBusinessEvents(true);
+      console.log('Carregando eventos de negócio...');
       const events = await apiService.getKeyBusinessEvents();
+      console.log('Eventos carregados:', events);
+      console.log('Key inflows:', events.key_inflows);
+      console.log('Key outflows:', events.key_outflows);
+      console.log('Primeiro inflow:', events.key_inflows[0]);
+      console.log('Primeiro outflow:', events.key_outflows[0]);
       setKeyBusinessEvents(events);
       
       // Inicializar modifiers com valores padrão
@@ -85,9 +118,14 @@ export function SimulacaoCenarios() {
       
     } catch (error) {
       console.error('Erro ao carregar eventos de negócio:', error);
+      console.error('Detalhes do erro:', {
+        message: error instanceof Error ? error.message : 'Erro desconhecido',
+        stack: error instanceof Error ? error.stack : undefined
+      });
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
       toast({
         title: "Erro ao carregar eventos",
-        description: "Não foi possível carregar os eventos de negócio. Tente novamente.",
+        description: `Não foi possível carregar os eventos de negócio: ${errorMessage}. Verifique se a API está rodando.`,
         variant: "destructive",
       });
     } finally {
@@ -154,6 +192,7 @@ export function SimulacaoCenarios() {
   const rodarSimulacao = async () => {
     try {
       setLoading(true);
+      console.log('Iniciando simulação...', { activeTab, scenario, seasonalityRules });
       
       let payload: any;
       let response: Response;
@@ -173,6 +212,8 @@ export function SimulacaoCenarios() {
           },
           body: JSON.stringify(payload)
         });
+        
+        console.log("Resposta da API (status):", response.status, response.statusText);
       } else {
         // Simulação de eventos de negócio
         const filteredInflowModifiers = Array.from(inflowModifiers.values())
@@ -196,6 +237,8 @@ export function SimulacaoCenarios() {
           },
           body: JSON.stringify(businessEventPayload)
         });
+        
+        console.log("Resposta da API (status):", response.status, response.statusText);
       }
 
       if (!response.ok) {
@@ -286,12 +329,6 @@ export function SimulacaoCenarios() {
     }
   };
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(value);
-  };
 
   const formatPercentage = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -318,10 +355,23 @@ export function SimulacaoCenarios() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-foreground">Simulação de Cenários</h1>
-        <p className="text-muted-foreground mt-2">
-          Teste diferentes cenários usando simulação de Monte Carlo e entenda o impacto no seu fluxo de caixa
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Simulação de Cenários</h1>
+            <p className="text-muted-foreground mt-2">
+              Teste diferentes cenários usando simulação de Monte Carlo e entenda o impacto no seu fluxo de caixa
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className={`w-3 h-3 rounded-full ${
+              apiStatus === 'online' ? 'bg-green-500' : 
+              apiStatus === 'offline' ? 'bg-red-500' : 'bg-yellow-500'
+            }`} />
+            <span className="text-sm text-muted-foreground">
+              API {apiStatus === 'online' ? 'Online' : apiStatus === 'offline' ? 'Offline' : 'Verificando...'}
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* Seleção de Modo de Simulação */}
@@ -503,10 +553,18 @@ export function SimulacaoCenarios() {
                     <Skeleton className="h-12 w-full" />
                   </div>
                 ) : keyBusinessEvents ? (
-                  <Accordion type="multiple" className="w-full">
-                    {keyBusinessEvents.key_inflows.map((event, index) => {
-                      const modifier = inflowModifiers.get(event.name);
+                  (() => {
+                    console.log('keyBusinessEvents existe:', keyBusinessEvents);
+                    console.log('key_inflows length:', keyBusinessEvents.key_inflows?.length);
+                    console.log('key_inflows data:', keyBusinessEvents.key_inflows);
+                    
+                    if (keyBusinessEvents.key_inflows && keyBusinessEvents.key_inflows.length > 0) {
                       return (
+                        <Accordion type="multiple" className="w-full">
+                          {keyBusinessEvents.key_inflows.map((event, index) => {
+                            console.log('Renderizando inflow:', event);
+                            const modifier = inflowModifiers.get(event.name);
+                            return (
                         <AccordionItem key={index} value={`inflow-${index}`}>
                           <AccordionTrigger className="text-left">
                             {event.name}
@@ -514,8 +572,8 @@ export function SimulacaoCenarios() {
                           <AccordionContent className="space-y-4 pt-4">
                             <p className="text-sm text-muted-foreground">
                               Esta é uma das suas principais fontes de renda, totalizando {' '}
-                              <span className="font-bold text-primary">{formatCurrency(item.total_value)}</span>
-                              {' '}em {item.frequency} recebimentos.
+                              <span className="font-bold text-primary">{formatCurrency(event.total_amount)}</span>
+                              {' '}em {event.frequency} recebimentos.
                             </p>
                             
                             <div>
@@ -560,9 +618,19 @@ export function SimulacaoCenarios() {
                             </div>
                           </AccordionContent>
                         </AccordionItem>
+                            );
+                          })}
+                        </Accordion>
                       );
-                    })}
-                  </Accordion>
+                    } else {
+                      return (
+                        <div className="text-center text-muted-foreground py-4">
+                          <p>Nenhum evento de receita encontrado.</p>
+                          <p className="text-sm mt-2">Faça o upload dos dados financeiros primeiro.</p>
+                        </div>
+                      );
+                    }
+                  })()
                 ) : (
                   <div className="text-center text-muted-foreground py-4">
                     Nenhum evento de receita encontrado
@@ -587,10 +655,17 @@ export function SimulacaoCenarios() {
                     <Skeleton className="h-12 w-full" />
                   </div>
                 ) : keyBusinessEvents ? (
-                  <Accordion type="multiple" className="w-full">
-                    {keyBusinessEvents.key_outflows.map((event, index) => {
-                      const modifier = outflowModifiers.get(event.name);
+                  (() => {
+                    console.log('key_outflows length:', keyBusinessEvents.key_outflows?.length);
+                    console.log('key_outflows data:', keyBusinessEvents.key_outflows);
+                    
+                    if (keyBusinessEvents.key_outflows && keyBusinessEvents.key_outflows.length > 0) {
                       return (
+                        <Accordion type="multiple" className="w-full">
+                          {keyBusinessEvents.key_outflows.map((event, index) => {
+                            console.log('Renderizando outflow:', event);
+                            const modifier = outflowModifiers.get(event.name);
+                            return (
                         <AccordionItem key={index} value={`outflow-${index}`}>
                           <AccordionTrigger className="text-left">
                             {event.name}
@@ -598,8 +673,8 @@ export function SimulacaoCenarios() {
                           <AccordionContent className="space-y-4 pt-4">
                             <p className="text-sm text-muted-foreground mb-4">
                               Este é um dos seus principais custos, totalizando {''}
-                              <span className="font-bold text-destructive">{formatCurrency(item.total_value)}</span>
-                              {' '}em {item.frequency} pagamentos.
+                              <span className="font-bold text-destructive">{formatCurrency(event.total_amount)}</span>
+                              {' '}em {event.frequency} pagamentos.
                             </p>
                             
                             <div>
@@ -644,9 +719,19 @@ export function SimulacaoCenarios() {
                             </div>
                           </AccordionContent>
                         </AccordionItem>
+                            );
+                          })}
+                        </Accordion>
                       );
-                    })}
-                  </Accordion>
+                    } else {
+                      return (
+                        <div className="text-center text-muted-foreground py-4">
+                          <p>Nenhum evento de custo encontrado.</p>
+                          <p className="text-sm mt-2">Faça o upload dos dados financeiros primeiro.</p>
+                        </div>
+                      );
+                    }
+                  })()
                 ) : (
                   <div className="text-center text-muted-foreground py-4">
                     Nenhum evento de custo encontrado
@@ -657,7 +742,17 @@ export function SimulacaoCenarios() {
           </div>
 
           {/* Botão de Simulação para Eventos de Negócio */}
-          <div className="flex justify-center">
+          <div className="flex justify-center gap-4">
+            {!keyBusinessEvents && (
+              <Button 
+                onClick={loadKeyBusinessEvents} 
+                disabled={loadingBusinessEvents} 
+                variant="outline"
+                className="px-6"
+              >
+                {loadingBusinessEvents ? 'Carregando...' : 'Carregar Eventos de Negócio'}
+              </Button>
+            )}
             <Button 
               onClick={rodarSimulacao} 
               disabled={loading || loadingBusinessEvents} 
@@ -846,13 +941,25 @@ export function SimulacaoCenarios() {
 
       {/* Informação sobre dados */}
       {!resultados && !loading && (
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            Para executar a simulação, certifique-se de que já fez o upload dos dados financeiros na seção "Upload de Dados".
-            A simulação utiliza seus dados históricos como base para gerar cenários futuros.
-          </AlertDescription>
-        </Alert>
+        <div className="space-y-4">
+          {apiStatus === 'offline' && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                <strong>API Offline:</strong> Não foi possível conectar com o servidor. Verifique se a API está rodando em http://localhost:8000.
+                <br />
+                <strong>Para iniciar a API:</strong> Execute o comando no terminal do backend: <code>python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000</code>
+              </AlertDescription>
+            </Alert>
+          )}
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Para executar a simulação, certifique-se de que já fez o upload dos dados financeiros na seção "Upload de Dados".
+              A simulação utiliza seus dados históricos como base para gerar cenários futuros.
+            </AlertDescription>
+          </Alert>
+        </div>
       )}
     </div>
   );
