@@ -47,6 +47,30 @@ export interface ScenarioResponse {
   };
 }
 
+export interface BusinessEvent {
+  name: string;
+  total_amount: number;
+  frequency: number;
+  category: string;
+}
+
+export interface KeyBusinessEventsResponse {
+  key_inflows: BusinessEvent[];
+  key_outflows: BusinessEvent[];
+}
+
+export interface EventModifier {
+  name: string;
+  value_change_percentage: number;
+  delay_days: number;
+}
+
+export interface BusinessEventSimulationRequest {
+  simulation_type: "event";
+  inflow_modifiers: EventModifier[];
+  outflow_modifiers: EventModifier[];
+}
+
 class ApiService {
   private async handleResponse<T>(response: Response): Promise<T> {
     if (!response.ok) {
@@ -137,6 +161,25 @@ class ApiService {
     });
 
     return this.handleResponse<ScenarioResponse>(response);
+  }
+
+  // Obter principais eventos de negócio
+  async getKeyBusinessEvents(): Promise<KeyBusinessEventsResponse> {
+    const response = await fetch(`${API_BASE_URL}/simulations/key-business-events`);
+    return this.handleResponse<KeyBusinessEventsResponse>(response);
+  }
+
+  // Simulação de eventos de negócio
+  async simulateBusinessEvents(request: BusinessEventSimulationRequest): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/simulations/scenario-simulation`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(request),
+    });
+
+    return this.handleResponse<any>(response);
   }
 
   // Verificar saúde da API

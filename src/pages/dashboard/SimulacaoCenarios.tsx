@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -6,10 +6,14 @@ import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Slider } from "@/components/ui/slider";
+import { Skeleton } from "@/components/ui/skeleton";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Activity, TrendingUp, TrendingDown, AlertCircle, Trash2, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { apiService } from "@/lib/api";
+import { apiService, BusinessEvent, EventModifier, BusinessEventSimulationRequest } from "@/lib/api";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface SeasonalityRule {
@@ -18,10 +22,21 @@ interface SeasonalityRule {
 }
 
 export function SimulacaoCenarios() {
+  const [activeTab, setActiveTab] = useState<"macroeconomic" | "business_events">("macroeconomic");
+  
+  // Estados para simulação macroeconômica
   const [scenario, setScenario] = useState<"otimista" | "conservador" | "pessimista">("conservador");
   const [seasonalityRules, setSeasonalityRules] = useState<SeasonalityRule[]>([]);
   const [selectedMonth, setSelectedMonth] = useState<string>("");
   const [percentageChange, setPercentageChange] = useState<string>("");
+  
+  // Estados para simulação de eventos de negócio
+  const [keyBusinessEvents, setKeyBusinessEvents] = useState<{ key_inflows: BusinessEvent[], key_outflows: BusinessEvent[] } | null>(null);
+  const [loadingBusinessEvents, setLoadingBusinessEvents] = useState(false);
+  const [inflowModifiers, setInflowModifiers] = useState<Map<string, EventModifier>>(new Map());
+  const [outflowModifiers, setOutflowModifiers] = useState<Map<string, EventModifier>>(new Map());
+  
+  // Estados compartilhados
   const [resultados, setResultados] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -30,6 +45,72 @@ export function SimulacaoCenarios() {
     "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
     "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
   ];
+
+  // Carregar eventos de negócio quando mudar para a aba de eventos
+  useEffect(() => {
+    if (activeTab === "business_events" && !keyBusinessEvents) {
+      loadKeyBusinessEvents();
+    }
+  }, [activeTab, keyBusinessEvents]);
+
+  const loadKeyBusinessEvents = async () => {
+    try {
+      setLoadingBusinessEvents(true);
+      const events = await apiService.getKeyBusinessEvents();
+      setKeyBusinessEvents(events);
+      
+      // Inicializar modifiers com valores padrão
+      const initialInflowModifiers = new Map<string, EventModifier>();
+      const initialOutflowModifiers = new Map<string, EventModifier>();
+      
+      events.key_inflows.forEach(event => {
+        initialInflowModifiers.set(event.name, {
+          name: event.name,
+          value_change_percentage: 0,
+          delay_days: 0
+        });
+      });
+      
+      events.key_outflows.forEach(event => {
+        initialOutflowModifiers.set(event.name, {
+          name: event.name,
+          value_change_percentage: 0,
+          delay_days: 0
+        });
+      });
+      
+      setInflowModifiers(initialInflowModifiers);
+      setOutflowModifiers(initialOutflowModifiers);
+      
+    } catch (error) {
+      console.error('Erro ao carregar eventos de negócio:', error);
+      toast({
+        title: "Erro ao carregar eventos",
+        description: "Não foi possível carregar os eventos de negócio. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingBusinessEvents(false);
+    }
+  };
+
+  const updateInflowModifier = (eventName: string, field: 'value_change_percentage' | 'delay_days', value: number) => {
+    const newModifiers = new Map(inflowModifiers);
+    const existing = newModifiers.get(eventName);
+    if (existing) {
+      newModifiers.set(eventName, { ...existing, [field]: value });
+      setInflowModifiers(newModifiers);
+    }
+  };
+
+  const updateOutflowModifier = (eventName: string, field: 'value_change_percentage' | 'delay_days', value: number) => {
+    const newModifiers = new Map(outflowModifiers);
+    const existing = newModifiers.get(eventName);
+    if (existing) {
+      newModifiers.set(eventName, { ...existing, [field]: value });
+      setOutflowModifiers(newModifiers);
+    }
+  };
 
   const addSeasonalityRule = () => {
     if (!selectedMonth || !percentageChange) {
@@ -73,21 +154,48 @@ export function SimulacaoCenarios() {
     try {
       setLoading(true);
       
-      const payload = {
-        scenario_type: scenario,
-        seasonality_rules: seasonalityRules
-      };
+      let payload: any;
+      let response: Response;
 
-      console.log("Enviando payload para simulação:", payload);
-      
-      // Fazer chamada para o novo endpoint
-      const response = await fetch('http://localhost:8000/api/simulations/scenario-simulation', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload)
-      });
+      if (activeTab === "macroeconomic") {
+        payload = {
+          scenario_type: scenario,
+          seasonality_rules: seasonalityRules
+        };
+
+        console.log("Enviando payload para simulação macroeconômica:", payload);
+        
+        response = await fetch('http://localhost:8000/api/simulations/scenario-simulation', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload)
+        });
+      } else {
+        // Simulação de eventos de negócio
+        const filteredInflowModifiers = Array.from(inflowModifiers.values())
+          .filter(modifier => modifier.value_change_percentage !== 0 || modifier.delay_days !== 0);
+        
+        const filteredOutflowModifiers = Array.from(outflowModifiers.values())
+          .filter(modifier => modifier.value_change_percentage !== 0 || modifier.delay_days !== 0);
+
+        const businessEventPayload: BusinessEventSimulationRequest = {
+          simulation_type: "event",
+          inflow_modifiers: filteredInflowModifiers,
+          outflow_modifiers: filteredOutflowModifiers
+        };
+
+        console.log("Enviando payload para simulação de eventos:", businessEventPayload);
+        
+        response = await fetch('http://localhost:8000/api/simulations/scenario-simulation', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(businessEventPayload)
+        });
+      }
 
       if (!response.ok) {
         throw new Error(`Erro na API: ${response.status}`);
@@ -153,7 +261,9 @@ export function SimulacaoCenarios() {
         
         toast({
           title: "Simulação concluída!",
-          description: `Cenário ${scenario} simulado com sucesso.`,
+          description: activeTab === "macroeconomic" 
+            ? `Cenário ${scenario} simulado com sucesso.`
+            : "Simulação de eventos de negócio concluída com sucesso.",
         });
         
       } else {
@@ -213,15 +323,23 @@ export function SimulacaoCenarios() {
         </p>
       </div>
 
-      {/* Painel de Controle */}
-      <Card className="shadow-card">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Activity className="h-5 w-5 text-primary" />
-            Configurar Cenário de Simulação
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
+      {/* Seleção de Modo de Simulação */}
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as typeof activeTab)} className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="macroeconomic">Cenários Macroeconômicos</TabsTrigger>
+          <TabsTrigger value="business_events">Eventos de Negócio</TabsTrigger>
+        </TabsList>
+
+        {/* Aba de Cenários Macroeconômicos */}
+        <TabsContent value="macroeconomic">
+          <Card className="shadow-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Activity className="h-5 w-5 text-primary" />
+                Configurar Cenário Macroeconômico
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
           {/* Seleção de Cenário Macroeconômico */}
           <div>
             <Label className="text-base font-medium mb-4 block">
@@ -351,18 +469,189 @@ export function SimulacaoCenarios() {
             )}
           </div>
 
-          <div className="pt-4">
+              <div className="pt-4">
+                <Button 
+                  onClick={rodarSimulacao} 
+                  disabled={loading} 
+                  size="lg" 
+                  className="w-full md:w-auto px-8"
+                >
+                  {loading ? 'Simulando...' : 'Simular Cenário'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Aba de Eventos de Negócio */}
+        <TabsContent value="business_events">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            {/* Seção de Receitas */}
+            <Card className="shadow-card">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-primary" />
+                  Principais Receitas
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loadingBusinessEvents ? (
+                  <div className="space-y-3">
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-full" />
+                  </div>
+                ) : keyBusinessEvents ? (
+                  <Accordion type="multiple" className="w-full">
+                    {keyBusinessEvents.key_inflows.map((event, index) => {
+                      const modifier = inflowModifiers.get(event.name);
+                      return (
+                        <AccordionItem key={index} value={`inflow-${index}`}>
+                          <AccordionTrigger className="text-left">
+                            <div>
+                              <div className="font-medium">{event.name}</div>
+                              <div className="text-sm text-muted-foreground">
+                                Total: {formatCurrency(event.total_amount)} | Freq: {event.frequency}x
+                              </div>
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent className="space-y-4 pt-4">
+                            <div>
+                              <Label className="text-sm font-medium">
+                                Variação de Valor: {modifier?.value_change_percentage || 0}%
+                              </Label>
+                              <div className="mt-2">
+                                <Slider
+                                  value={[modifier?.value_change_percentage || 0]}
+                                  onValueChange={(value) => updateInflowModifier(event.name, 'value_change_percentage', value[0])}
+                                  min={-100}
+                                  max={100}
+                                  step={1}
+                                  className="w-full"
+                                />
+                                <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                                  <span>-100%</span>
+                                  <span>0%</span>
+                                  <span>+100%</span>
+                                </div>
+                              </div>
+                            </div>
+                            <div>
+                              <Label htmlFor={`inflow-delay-${index}`} className="text-sm font-medium">
+                                Atraso (dias)
+                              </Label>
+                              <Input
+                                id={`inflow-delay-${index}`}
+                                type="number"
+                                min="0"
+                                value={modifier?.delay_days || 0}
+                                onChange={(e) => updateInflowModifier(event.name, 'delay_days', parseInt(e.target.value) || 0)}
+                                className="mt-2"
+                              />
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
+                      );
+                    })}
+                  </Accordion>
+                ) : (
+                  <div className="text-center text-muted-foreground py-4">
+                    Nenhum evento de receita encontrado
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Seção de Custos */}
+            <Card className="shadow-card">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingDown className="h-5 w-5 text-destructive" />
+                  Principais Custos
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loadingBusinessEvents ? (
+                  <div className="space-y-3">
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-full" />
+                  </div>
+                ) : keyBusinessEvents ? (
+                  <Accordion type="multiple" className="w-full">
+                    {keyBusinessEvents.key_outflows.map((event, index) => {
+                      const modifier = outflowModifiers.get(event.name);
+                      return (
+                        <AccordionItem key={index} value={`outflow-${index}`}>
+                          <AccordionTrigger className="text-left">
+                            <div>
+                              <div className="font-medium">{event.name}</div>
+                              <div className="text-sm text-muted-foreground">
+                                Total: {formatCurrency(event.total_amount)} | Freq: {event.frequency}x
+                              </div>
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent className="space-y-4 pt-4">
+                            <div>
+                              <Label className="text-sm font-medium">
+                                Variação de Valor: {modifier?.value_change_percentage || 0}%
+                              </Label>
+                              <div className="mt-2">
+                                <Slider
+                                  value={[modifier?.value_change_percentage || 0]}
+                                  onValueChange={(value) => updateOutflowModifier(event.name, 'value_change_percentage', value[0])}
+                                  min={-100}
+                                  max={100}
+                                  step={1}
+                                  className="w-full"
+                                />
+                                <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                                  <span>-100%</span>
+                                  <span>0%</span>
+                                  <span>+100%</span>
+                                </div>
+                              </div>
+                            </div>
+                            <div>
+                              <Label htmlFor={`outflow-delay-${index}`} className="text-sm font-medium">
+                                Atraso (dias)
+                              </Label>
+                              <Input
+                                id={`outflow-delay-${index}`}
+                                type="number"
+                                min="0"
+                                value={modifier?.delay_days || 0}
+                                onChange={(e) => updateOutflowModifier(event.name, 'delay_days', parseInt(e.target.value) || 0)}
+                                className="mt-2"
+                              />
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
+                      );
+                    })}
+                  </Accordion>
+                ) : (
+                  <div className="text-center text-muted-foreground py-4">
+                    Nenhum evento de custo encontrado
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Botão de Simulação para Eventos de Negócio */}
+          <div className="flex justify-center">
             <Button 
               onClick={rodarSimulacao} 
-              disabled={loading} 
+              disabled={loading || loadingBusinessEvents} 
               size="lg" 
-              className="w-full md:w-auto px-8"
+              className="px-8"
             >
-              {loading ? 'Simulando...' : 'Simular Cenário'}
+              {loading ? 'Simulando...' : 'Simular Eventos'}
             </Button>
           </div>
-        </CardContent>
-      </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* Resultados da Simulação */}
       {resultados && (
