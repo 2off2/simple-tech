@@ -1,9 +1,12 @@
-import { clsx, type ClassValue } from "clsx"
+// Conteúdo completo para: src/lib/utils.ts
+
+import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
+
 /**
  * Formata um número como moeda brasileira (BRL) de forma segura.
  * @param value O número a ser formatado.
