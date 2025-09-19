@@ -18,10 +18,6 @@ const navigationItems = [{
   title: "Simulação de Cenários",
   url: "/dashboard/simulacao",
   icon: Activity
-}, {
-  title: "Ciclos Operacionais",
-  url: "/dashboard/prazos-medios",
-  icon: Clock
 }];
 export function AppSidebar() {
   const sidebar = useSidebar();
