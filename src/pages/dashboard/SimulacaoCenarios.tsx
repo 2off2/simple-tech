@@ -15,6 +15,7 @@ import { Activity, TrendingUp, TrendingDown, AlertCircle, Trash2, Plus } from "l
 import { useToast } from "@/hooks/use-toast";
 import { apiService, BusinessEvent, EventModifier, BusinessEventSimulationRequest } from "@/lib/api";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { formatCurrency } from '@/lib/utils';
 
 interface SeasonalityRule {
   month: string;
@@ -512,7 +513,9 @@ export function SimulacaoCenarios() {
                           </AccordionTrigger>
                           <AccordionContent className="space-y-4 pt-4">
                             <p className="text-sm text-muted-foreground">
-                              Esta é uma das suas principais fontes de renda, totalizando {formatCurrency(event.total_amount)} em {event.frequency} recebimentos.
+                              Esta é uma das suas principais fontes de renda, totalizando {' '}
+                              <span className="font-bold text-primary">{formatCurrency(item.total_value)}</span>
+                              {' '}em {item.frequency} recebimentos.
                             </p>
                             
                             <div>
@@ -593,8 +596,10 @@ export function SimulacaoCenarios() {
                             {event.name}
                           </AccordionTrigger>
                           <AccordionContent className="space-y-4 pt-4">
-                            <p className="text-sm text-muted-foreground">
-                              Este é um dos seus principais custos, totalizando {formatCurrency(event.total_amount)} em {event.frequency} ocorrências.
+                            <p className="text-sm text-muted-foreground mb-4">
+                              Este é um dos seus principais custos, totalizando {''}
+                              <span className="font-bold text-destructive">{formatCurrency(item.total_value)}</span>
+                              {' '}em {item.frequency} pagamentos.
                             </p>
                             
                             <div>
