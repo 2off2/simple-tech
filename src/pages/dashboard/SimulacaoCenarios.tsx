@@ -326,8 +326,8 @@ export function SimulacaoCenarios() {
       {/* Seleção de Modo de Simulação */}
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as typeof activeTab)} className="w-full">
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="macroeconomic">Cenários Macroeconômicos</TabsTrigger>
-          <TabsTrigger value="business_events">Eventos de Negócio</TabsTrigger>
+          <TabsTrigger value="macroeconomic">Cenários Gerais</TabsTrigger>
+          <TabsTrigger value="business_events">Simular Eventos</TabsTrigger>
         </TabsList>
 
         {/* Aba de Cenários Macroeconômicos */}
@@ -483,7 +483,7 @@ export function SimulacaoCenarios() {
           </Card>
         </TabsContent>
 
-        {/* Aba de Eventos de Negócio */}
+        {/* Aba de Simular Eventos */}
         <TabsContent value="business_events">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
             {/* Seção de Receitas */}
@@ -491,7 +491,7 @@ export function SimulacaoCenarios() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <TrendingUp className="h-5 w-5 text-primary" />
-                  Principais Receitas
+                  O que pode mudar nas suas receitas?
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -508,46 +508,52 @@ export function SimulacaoCenarios() {
                       return (
                         <AccordionItem key={index} value={`inflow-${index}`}>
                           <AccordionTrigger className="text-left">
-                            <div>
-                              <div className="font-medium">{event.name}</div>
-                              <div className="text-sm text-muted-foreground">
-                                Total: {formatCurrency(event.total_amount)} | Freq: {event.frequency}x
-                              </div>
-                            </div>
+                            {event.name}
                           </AccordionTrigger>
                           <AccordionContent className="space-y-4 pt-4">
+                            <p className="text-sm text-muted-foreground">
+                              Esta é uma das suas principais fontes de renda, totalizando {formatCurrency(event.total_amount)} em {event.frequency} recebimentos.
+                            </p>
+                            
                             <div>
                               <Label className="text-sm font-medium">
-                                Variação de Valor: {modifier?.value_change_percentage || 0}%
+                                Ajustar Valor:
                               </Label>
-                              <div className="mt-2">
+                              <div className="mt-2 flex items-center space-x-3">
                                 <Slider
                                   value={[modifier?.value_change_percentage || 0]}
                                   onValueChange={(value) => updateInflowModifier(event.name, 'value_change_percentage', value[0])}
                                   min={-100}
                                   max={100}
                                   step={1}
-                                  className="w-full"
+                                  className="flex-1"
                                 />
-                                <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                                  <span>-100%</span>
-                                  <span>0%</span>
-                                  <span>+100%</span>
+                                <div className="w-16 text-sm font-medium">
+                                  {modifier?.value_change_percentage || 0}%
                                 </div>
                               </div>
+                              <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                                <span>-100%</span>
+                                <span>0%</span>
+                                <span>+100%</span>
+                              </div>
                             </div>
+                            
                             <div>
-                              <Label htmlFor={`inflow-delay-${index}`} className="text-sm font-medium">
-                                Atraso (dias)
+                              <Label className="text-sm font-medium">
+                                Atrasar:
                               </Label>
-                              <Input
-                                id={`inflow-delay-${index}`}
-                                type="number"
-                                min="0"
-                                value={modifier?.delay_days || 0}
-                                onChange={(e) => updateInflowModifier(event.name, 'delay_days', parseInt(e.target.value) || 0)}
-                                className="mt-2"
-                              />
+                              <div className="mt-2 flex items-center space-x-2">
+                                <Input
+                                  id={`inflow-delay-${index}`}
+                                  type="number"
+                                  min="0"
+                                  value={modifier?.delay_days || 0}
+                                  onChange={(e) => updateInflowModifier(event.name, 'delay_days', parseInt(e.target.value) || 0)}
+                                  className="w-20"
+                                />
+                                <span className="text-sm text-muted-foreground">dias</span>
+                              </div>
                             </div>
                           </AccordionContent>
                         </AccordionItem>
@@ -567,7 +573,7 @@ export function SimulacaoCenarios() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <TrendingDown className="h-5 w-5 text-destructive" />
-                  Principais Custos
+                  O que pode mudar nos seus custos?
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -584,46 +590,52 @@ export function SimulacaoCenarios() {
                       return (
                         <AccordionItem key={index} value={`outflow-${index}`}>
                           <AccordionTrigger className="text-left">
-                            <div>
-                              <div className="font-medium">{event.name}</div>
-                              <div className="text-sm text-muted-foreground">
-                                Total: {formatCurrency(event.total_amount)} | Freq: {event.frequency}x
-                              </div>
-                            </div>
+                            {event.name}
                           </AccordionTrigger>
                           <AccordionContent className="space-y-4 pt-4">
+                            <p className="text-sm text-muted-foreground">
+                              Este é um dos seus principais custos, totalizando {formatCurrency(event.total_amount)} em {event.frequency} ocorrências.
+                            </p>
+                            
                             <div>
                               <Label className="text-sm font-medium">
-                                Variação de Valor: {modifier?.value_change_percentage || 0}%
+                                Ajustar Valor:
                               </Label>
-                              <div className="mt-2">
+                              <div className="mt-2 flex items-center space-x-3">
                                 <Slider
                                   value={[modifier?.value_change_percentage || 0]}
                                   onValueChange={(value) => updateOutflowModifier(event.name, 'value_change_percentage', value[0])}
                                   min={-100}
                                   max={100}
                                   step={1}
-                                  className="w-full"
+                                  className="flex-1"
                                 />
-                                <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                                  <span>-100%</span>
-                                  <span>0%</span>
-                                  <span>+100%</span>
+                                <div className="w-16 text-sm font-medium">
+                                  {modifier?.value_change_percentage || 0}%
                                 </div>
                               </div>
+                              <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                                <span>-100%</span>
+                                <span>0%</span>
+                                <span>+100%</span>
+                              </div>
                             </div>
+                            
                             <div>
-                              <Label htmlFor={`outflow-delay-${index}`} className="text-sm font-medium">
-                                Atraso (dias)
+                              <Label className="text-sm font-medium">
+                                Atrasar:
                               </Label>
-                              <Input
-                                id={`outflow-delay-${index}`}
-                                type="number"
-                                min="0"
-                                value={modifier?.delay_days || 0}
-                                onChange={(e) => updateOutflowModifier(event.name, 'delay_days', parseInt(e.target.value) || 0)}
-                                className="mt-2"
-                              />
+                              <div className="mt-2 flex items-center space-x-2">
+                                <Input
+                                  id={`outflow-delay-${index}`}
+                                  type="number"
+                                  min="0"
+                                  value={modifier?.delay_days || 0}
+                                  onChange={(e) => updateOutflowModifier(event.name, 'delay_days', parseInt(e.target.value) || 0)}
+                                  className="w-20"
+                                />
+                                <span className="text-sm text-muted-foreground">dias</span>
+                              </div>
                             </div>
                           </AccordionContent>
                         </AccordionItem>
@@ -647,7 +659,7 @@ export function SimulacaoCenarios() {
               size="lg" 
               className="px-8"
             >
-              {loading ? 'Simulando...' : 'Simular Eventos'}
+              {loading ? 'Simulando...' : 'Simular Impacto dos Eventos'}
             </Button>
           </div>
         </TabsContent>
