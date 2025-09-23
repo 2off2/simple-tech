@@ -13,7 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Activity, TrendingUp, TrendingDown, AlertCircle, Trash2, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { apiService, BusinessEvent, EventModifier, BusinessEventSimulationRequest } from "@/lib/api";
+import { apiService, BusinessEvent, EventModifier, BusinessEventSimulationRequest, LoanSuggestionsResponse, LoanSimulationRequest } from "@/lib/api";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { formatCurrency } from '@/lib/utils';
 
@@ -23,7 +23,7 @@ interface SeasonalityRule {
 }
 
 export function SimulacaoCenarios() {
-  const [activeTab, setActiveTab] = useState<"macroeconomic" | "business_events">("macroeconomic");
+  const [activeTab, setActiveTab] = useState<"macroeconomic" | "business_events" | "emprestimo">("macroeconomic");
   
   // Estados para simulação macroeconômica
   const [scenario, setScenario] = useState<"otimista" | "conservador" | "pessimista">("conservador");
@@ -36,6 +36,14 @@ export function SimulacaoCenarios() {
   const [loadingBusinessEvents, setLoadingBusinessEvents] = useState(false);
   const [inflowModifiers, setInflowModifiers] = useState<Map<string, EventModifier>>(new Map());
   const [outflowModifiers, setOutflowModifiers] = useState<Map<string, EventModifier>>(new Map());
+  
+  // Estados para simulação de empréstimo
+  const [loanSuggestions, setLoanSuggestions] = useState<LoanSuggestionsResponse | null>(null);
+  const [loadingLoanSuggestions, setLoadingLoanSuggestions] = useState(false);
+  const [loanAmount, setLoanAmount] = useState<number>(0);
+  const [interestRate, setInterestRate] = useState<number>(2.5);
+  const [loanTerm, setLoanTerm] = useState<number>(12);
+  const [estimatedInstallment, setEstimatedInstallment] = useState<number>(0);
   
   // Estados compartilhados
   const [resultados, setResultados] = useState<any>(null);
@@ -54,15 +62,17 @@ export function SimulacaoCenarios() {
     if (activeTab === "business_events" && !keyBusinessEvents) {
       console.log('Carregando eventos de negócio...');
       loadKeyBusinessEvents();
+    } else if (activeTab === "emprestimo" && !loanSuggestions) {
+      console.log('Carregando sugestões de empréstimo...');
+      loadLoanSuggestions();
     } else {
-      console.log('Não carregando eventos:', { 
+      console.log('Não carregando dados:', { 
         activeTab, 
         keyBusinessEvents: !!keyBusinessEvents,
-        condition1: activeTab === "business_events",
-        condition2: !keyBusinessEvents
+        loanSuggestions: !!loanSuggestions
       });
     }
-  }, [activeTab, keyBusinessEvents]);
+  }, [activeTab, keyBusinessEvents, loanSuggestions]);
 
   // Verificar saúde da API ao carregar o componente
   useEffect(() => {
@@ -133,6 +143,26 @@ export function SimulacaoCenarios() {
     }
   };
 
+  const loadLoanSuggestions = async () => {
+    try {
+      setLoadingLoanSuggestions(true);
+      console.log('Carregando sugestões de empréstimo...');
+      const suggestions = await apiService.getLoanSuggestions();
+      console.log('Sugestões carregadas:', suggestions);
+      setLoanSuggestions(suggestions);
+    } catch (error) {
+      console.error('Erro ao carregar sugestões de empréstimo:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      toast({
+        title: "Erro ao carregar sugestões",
+        description: `Não foi possível carregar as sugestões de empréstimo: ${errorMessage}. Verifique se a API está rodando.`,
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingLoanSuggestions(false);
+    }
+  };
+
   const updateInflowModifier = (eventName: string, field: 'value_change_percentage' | 'delay_days', value: number) => {
     const newModifiers = new Map(inflowModifiers);
     const existing = newModifiers.get(eventName);
@@ -150,6 +180,26 @@ export function SimulacaoCenarios() {
       setOutflowModifiers(newModifiers);
     }
   };
+
+  const calculateInstallment = (amount: number, rate: number, term: number) => {
+    if (amount <= 0 || rate <= 0 || term <= 0) return 0;
+    const monthlyRate = rate / 100;
+    const installment = (amount * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -term));
+    return Math.round(installment * 100) / 100;
+  };
+
+  const useLoanSuggestion = (suggestion: any) => {
+    setLoanAmount(suggestion.suggested_amount);
+    setLoanTerm(suggestion.common_term_months);
+    setInterestRate(2.5); // Taxa padrão
+    setEstimatedInstallment(suggestion.estimated_installment);
+  };
+
+  // Atualizar parcela estimada quando os valores mudarem
+  useEffect(() => {
+    const installment = calculateInstallment(loanAmount, interestRate, loanTerm);
+    setEstimatedInstallment(installment);
+  }, [loanAmount, interestRate, loanTerm]);
 
   const addSeasonalityRule = () => {
     if (!selectedMonth || !percentageChange) {
@@ -214,7 +264,7 @@ export function SimulacaoCenarios() {
         });
         
         console.log("Resposta da API (status):", response.status, response.statusText);
-      } else {
+      } else if (activeTab === "business_events") {
         // Simulação de eventos de negócio
         const filteredInflowModifiers = Array.from(inflowModifiers.values())
           .filter(modifier => modifier.value_change_percentage !== 0 || modifier.delay_days !== 0);
@@ -236,6 +286,28 @@ export function SimulacaoCenarios() {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(businessEventPayload)
+        });
+        
+        console.log("Resposta da API (status):", response.status, response.statusText);
+      } else {
+        // Simulação de empréstimo
+        const loanPayload: LoanSimulationRequest = {
+          simulation_type: "loan_impact",
+          loan_params: {
+            amount: loanAmount,
+            interest_rate_monthly: interestRate,
+            term_months: loanTerm
+          }
+        };
+
+        console.log("Enviando payload para simulação de empréstimo:", loanPayload);
+        
+        response = await fetch('http://localhost:8000/api/simulations/scenario-simulation', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(loanPayload)
         });
         
         console.log("Resposta da API (status):", response.status, response.statusText);
@@ -307,7 +379,9 @@ export function SimulacaoCenarios() {
           title: "Simulação concluída!",
           description: activeTab === "macroeconomic" 
             ? `Cenário ${scenario} simulado com sucesso.`
-            : "Simulação de eventos de negócio concluída com sucesso.",
+            : activeTab === "business_events"
+            ? "Simulação de eventos de negócio concluída com sucesso."
+            : "Simulação de empréstimo concluída com sucesso.",
         });
         
       } else {
@@ -376,9 +450,10 @@ export function SimulacaoCenarios() {
 
       {/* Seleção de Modo de Simulação */}
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as typeof activeTab)} className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="macroeconomic">Cenários Gerais</TabsTrigger>
           <TabsTrigger value="business_events">Simular Eventos</TabsTrigger>
+          <TabsTrigger value="emprestimo">Simular Empréstimo</TabsTrigger>
         </TabsList>
 
         {/* Aba de Cenários Macroeconômicos */}
@@ -523,7 +598,7 @@ export function SimulacaoCenarios() {
               <div className="pt-4">
                 <Button 
                   onClick={rodarSimulacao} 
-                  disabled={loading} 
+                  disabled={loading || apiStatus !== 'online'} 
                   size="lg" 
                   className="w-full md:w-auto px-8"
                 >
@@ -759,7 +834,159 @@ export function SimulacaoCenarios() {
               size="lg" 
               className="px-8"
             >
-              {loading ? 'Simulando...' : 'Simular Impacto dos Eventos'}
+              {loading ? 'Simulando...' : 
+               activeTab === "macroeconomic" ? "Simular Cenário" : 
+               activeTab === "business_events" ? "Simular Impacto dos Eventos" :
+               "Simular Impacto no Caixa"}
+            </Button>
+          </div>
+        </TabsContent>
+
+        {/* Aba de Simulação de Empréstimo */}
+        <TabsContent value="emprestimo">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Coluna Esquerda - Análise de Necessidade de Crédito */}
+            <Card className="shadow-card">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-primary" />
+                  Análise de Necessidade de Crédito
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loadingLoanSuggestions ? (
+                  <div className="space-y-4">
+                    <Skeleton className="h-24 w-full" />
+                    <Skeleton className="h-24 w-full" />
+                  </div>
+                ) : loanSuggestions ? (
+                  <div className="space-y-4">
+                    {/* SOS Loan */}
+                    <div className="border rounded-lg p-4">
+                      <h4 className="font-semibold text-destructive mb-2">{loanSuggestions.sos_loan.title}</h4>
+                      <p className="text-sm text-muted-foreground mb-3">{loanSuggestions.sos_loan.description}</p>
+                      <div className="grid grid-cols-2 gap-2 text-sm mb-3">
+                        <div>
+                          <span className="text-muted-foreground">Valor:</span>
+                          <div className="font-medium">{formatCurrency(loanSuggestions.sos_loan.suggested_amount)}</div>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Prazo:</span>
+                          <div className="font-medium">{loanSuggestions.sos_loan.common_term_months} meses</div>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Parcela estimada:</span>
+                          <div className="font-medium">{formatCurrency(loanSuggestions.sos_loan.estimated_installment)}</div>
+                        </div>
+                      </div>
+                      <Button 
+                        size="sm" 
+                        variant="destructive"
+                        onClick={() => useLoanSuggestion(loanSuggestions.sos_loan)}
+                        className="w-full"
+                      >
+                        Usar estes valores
+                      </Button>
+                    </div>
+
+                    {/* Strategic Loan */}
+                    <div className="border rounded-lg p-4">
+                      <h4 className="font-semibold text-blue-600 mb-2">{loanSuggestions.strategic_loan.title}</h4>
+                      <p className="text-sm text-muted-foreground mb-3">{loanSuggestions.strategic_loan.description}</p>
+                      <div className="grid grid-cols-2 gap-2 text-sm mb-3">
+                        <div>
+                          <span className="text-muted-foreground">Valor:</span>
+                          <div className="font-medium">{formatCurrency(loanSuggestions.strategic_loan.suggested_amount)}</div>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Prazo:</span>
+                          <div className="font-medium">{loanSuggestions.strategic_loan.common_term_months} meses</div>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Parcela estimada:</span>
+                          <div className="font-medium">{formatCurrency(loanSuggestions.strategic_loan.estimated_installment)}</div>
+                        </div>
+                      </div>
+                      <Button 
+                        size="sm" 
+                        variant="default"
+                        onClick={() => useLoanSuggestion(loanSuggestions.strategic_loan)}
+                        className="w-full"
+                      >
+                        Usar estes valores
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center text-muted-foreground">
+                    Nenhuma sugestão disponível
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Coluna Direita - Simular Impacto */}
+            <Card className="shadow-card">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <AlertCircle className="h-5 w-5 text-primary" />
+                  Simule o Impacto do Empréstimo
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="loanAmount">Valor do Empréstimo (R$)</Label>
+                  <Input
+                    id="loanAmount"
+                    type="number"
+                    value={loanAmount}
+                    onChange={(e) => setLoanAmount(Number(e.target.value))}
+                    placeholder="0"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="interestRate">Taxa de Juros (% a.m.)</Label>
+                  <Input
+                    id="interestRate"
+                    type="number"
+                    step="0.1"
+                    value={interestRate}
+                    onChange={(e) => setInterestRate(Number(e.target.value))}
+                    placeholder="2.5"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="loanTerm">Prazo (meses)</Label>
+                  <Input
+                    id="loanTerm"
+                    type="number"
+                    value={loanTerm}
+                    onChange={(e) => setLoanTerm(Number(e.target.value))}
+                    placeholder="12"
+                  />
+                </div>
+
+                <div className="p-3 bg-muted rounded-lg">
+                  <Label className="text-sm text-muted-foreground">Parcela Estimada</Label>
+                  <div className="text-lg font-semibold">
+                    {formatCurrency(estimatedInstallment)}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Botão de Simulação para Empréstimo */}
+          <div className="flex justify-center mt-6">
+            <Button 
+              onClick={rodarSimulacao} 
+              disabled={loading || apiStatus !== 'online' || loanAmount <= 0}
+              size="lg"
+              className="px-8"
+            >
+              {loading ? "Simulando..." : "Simular Impacto no Caixa"}
             </Button>
           </div>
         </TabsContent>

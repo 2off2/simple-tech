@@ -71,6 +71,28 @@ export interface BusinessEventSimulationRequest {
   outflow_modifiers: EventModifier[];
 }
 
+export interface LoanSuggestion {
+  title: string;
+  description: string;
+  suggested_amount: number;
+  common_term_months: number;
+  estimated_installment: number;
+}
+
+export interface LoanSuggestionsResponse {
+  sos_loan: LoanSuggestion;
+  strategic_loan: LoanSuggestion;
+}
+
+export interface LoanSimulationRequest {
+  simulation_type: "loan_impact";
+  loan_params: {
+    amount: number;
+    interest_rate_monthly: number;
+    term_months: number;
+  };
+}
+
 class ApiService {
   private async handleResponse<T>(response: Response): Promise<T> {
     if (!response.ok) {
@@ -169,8 +191,27 @@ class ApiService {
     return this.handleResponse<KeyBusinessEventsResponse>(response);
   }
 
+  // Obter sugestões de empréstimos
+  async getLoanSuggestions(): Promise<LoanSuggestionsResponse> {
+    const response = await fetch(`${API_BASE_URL}/simulations/loan-suggestions`);
+    return this.handleResponse<LoanSuggestionsResponse>(response);
+  }
+
   // Simulação de eventos de negócio
   async simulateBusinessEvents(request: BusinessEventSimulationRequest): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/simulations/scenario-simulation`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(request),
+    });
+
+    return this.handleResponse<any>(response);
+  }
+
+  // Simulação de empréstimo
+  async simulateLoanImpact(request: LoanSimulationRequest): Promise<any> {
     const response = await fetch(`${API_BASE_URL}/simulations/scenario-simulation`, {
       method: 'POST',
       headers: {
