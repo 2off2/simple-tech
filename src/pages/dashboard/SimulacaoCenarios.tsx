@@ -658,7 +658,10 @@ export function SimulacaoCenarios() {
                                <div className="mt-2 flex items-center space-x-3">
                                  <Slider
                                    value={[modifier?.value_change_percentage ?? 0]}
-                                   onValueChange={(value) => updateInflowModifier(event.name, 'value_change_percentage', value[0])}
+                                   onValueChange={(value) => {
+                                     console.log('Slider inflow value changed:', value, 'current modifier:', modifier);
+                                     updateInflowModifier(event.name, 'value_change_percentage', value[0]);
+                                   }}
                                    min={-100}
                                    max={100}
                                    step={1}

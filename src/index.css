@@ -128,4 +128,10 @@ All colors MUST be HSL.
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Custom Slider Styles for Proper Centering */
+  .slider-root .slider-thumb {
+    /* Override Radix UI positioning to center the thumb properly */
+    margin-left: -10px; /* Half of thumb width (20px / 2) */
+  }
 }
