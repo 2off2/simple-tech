@@ -11,8 +11,8 @@ const Features = () => {
     },
     {
       icon: LineChart,
-      title: "Relatórios Inteligentes",
-      description: "Dashboards interativos que transformam dados complexos em insights visuais claros.",
+      title: "Simulação Estratégica de Cenários",
+      description: "Visualize cenários futuros com análise de risco Monte Carlo para tomadas de decisão informadas.",
       color: "text-primary"
     },
     {
