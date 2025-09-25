@@ -655,19 +655,20 @@ export function SimulacaoCenarios() {
                               <Label className="text-sm font-medium">
                                 Ajustar Valor:
                               </Label>
-                              <div className="mt-2 flex items-center space-x-3">
-                                <Slider
-                                  value={[modifier?.value_change_percentage || 0]}
-                                  onValueChange={(value) => updateInflowModifier(event.name, 'value_change_percentage', value[0])}
-                                  min={-100}
-                                  max={100}
-                                  step={1}
-                                  className="flex-1"
-                                />
-                                <div className="w-16 text-sm font-medium">
-                                  {modifier?.value_change_percentage || 0}%
-                                </div>
-                              </div>
+                               <div className="mt-2 flex items-center space-x-3">
+                                 <Slider
+                                   value={[modifier?.value_change_percentage ?? 0]}
+                                   onValueChange={(value) => updateInflowModifier(event.name, 'value_change_percentage', value[0])}
+                                   min={-100}
+                                   max={100}
+                                   step={1}
+                                   defaultValue={[0]}
+                                   className="flex-1"
+                                 />
+                                 <div className="w-16 text-sm font-medium">
+                                   {modifier?.value_change_percentage ?? 0}%
+                                 </div>
+                               </div>
                               <div className="flex justify-between text-xs text-muted-foreground mt-1">
                                 <span>-100%</span>
                                 <span>0%</span>
@@ -756,19 +757,20 @@ export function SimulacaoCenarios() {
                               <Label className="text-sm font-medium">
                                 Ajustar Valor:
                               </Label>
-                              <div className="mt-2 flex items-center space-x-3">
-                                <Slider
-                                  value={[modifier?.value_change_percentage || 0]}
-                                  onValueChange={(value) => updateOutflowModifier(event.name, 'value_change_percentage', value[0])}
-                                  min={-100}
-                                  max={100}
-                                  step={1}
-                                  className="flex-1"
-                                />
-                                <div className="w-16 text-sm font-medium">
-                                  {modifier?.value_change_percentage || 0}%
-                                </div>
-                              </div>
+                               <div className="mt-2 flex items-center space-x-3">
+                                 <Slider
+                                   value={[modifier?.value_change_percentage ?? 0]}
+                                   onValueChange={(value) => updateOutflowModifier(event.name, 'value_change_percentage', value[0])}
+                                   min={-100}
+                                   max={100}
+                                   step={1}
+                                   defaultValue={[0]}
+                                   className="flex-1"
+                                 />
+                                 <div className="w-16 text-sm font-medium">
+                                   {modifier?.value_change_percentage ?? 0}%
+                                 </div>
+                               </div>
                               <div className="flex justify-between text-xs text-muted-foreground mt-1">
                                 <span>-100%</span>
                                 <span>0%</span>
