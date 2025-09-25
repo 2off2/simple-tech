@@ -18,14 +18,13 @@ export function UploadDados({ onUploadSuccess }: UploadDadosProps) {
   const onDropFile = useCallback((acceptedFiles: File[]) => {
     const uploadedFile = acceptedFiles[0];
     if (uploadedFile) {
-      // Verificar se é arquivo Excel
-      const isExcel = uploadedFile.name.endsWith('.xlsx') || 
-                     uploadedFile.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-      
-      if (!isExcel) {
+      // Verificar formatos aceitos: .xlsx, .xls, .csv
+      const lower = uploadedFile.name.toLowerCase();
+      const isAccepted = lower.endsWith('.xlsx') || lower.endsWith('.xls') || lower.endsWith('.csv');
+      if (!isAccepted) {
         toast({
           title: "Formato inválido",
-          description: "Por favor, selecione um arquivo Excel (.xlsx).",
+          description: "Selecione .xlsx, .xls ou .csv.",
           variant: "destructive",
         });
         return;
@@ -38,7 +37,9 @@ export function UploadDados({ onUploadSuccess }: UploadDadosProps) {
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop: onDropFile,
     accept: {
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx']
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+      'application/vnd.ms-excel': ['.xls'],
+      'text/csv': ['.csv']
     },
     multiple: false
   });
@@ -63,6 +64,8 @@ export function UploadDados({ onUploadSuccess }: UploadDadosProps) {
         description: "Arquivo enviado e processado com sucesso.",
       });
       
+      // Notificar outras telas para recarregar (Visão Geral)
+      window.dispatchEvent(new Event('data-updated'));
       onUploadSuccess?.();
     } catch (error) {
       console.error('Erro no upload:', error);
@@ -89,7 +92,7 @@ export function UploadDados({ onUploadSuccess }: UploadDadosProps) {
       <div className="max-w-2xl mx-auto">
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Arquivo de Dados da Empresa (.xlsx)</CardTitle>
+            <CardTitle className="text-lg">Arquivo de Dados da Empresa (.xlsx / .xls / .csv)</CardTitle>
             <p className="text-sm text-muted-foreground">
               O arquivo deve conter duas abas: <strong>FluxoDeCaixa</strong> e <strong>DadosContabeis</strong>
             </p>
@@ -120,7 +123,7 @@ export function UploadDados({ onUploadSuccess }: UploadDadosProps) {
                       {isDragActive ? 'Solte o arquivo aqui' : 'Arraste e solte seu arquivo Excel'}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      ou clique para selecionar (.xlsx)
+                      ou clique para selecionar (.xlsx, .xls, .csv)
                     </p>
                   </div>
                 )}
@@ -133,6 +136,7 @@ export function UploadDados({ onUploadSuccess }: UploadDadosProps) {
               <ul className="text-sm text-muted-foreground space-y-1">
                 <li>• <strong>Aba "FluxoDeCaixa":</strong> Dados do regime de caixa (entradas e saídas efetivas)</li>
                 <li>• <strong>Aba "DadosContabeis":</strong> Dados do regime de competência (faturamento e custos)</li>
+                <li>• <strong>CSV:</strong> Opcionalmente, envie arquivo .csv consolidado</li>
               </ul>
             </div>
           </CardContent>

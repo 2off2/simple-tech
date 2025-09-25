@@ -1,6 +1,36 @@
 // src/lib/api.ts
 
-const API_BASE_URL = 'http://localhost:8000/api';
+import axios, { AxiosError, AxiosInstance } from 'axios';
+
+const RAW_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const API_BASE_URL = `${RAW_BASE_URL}/api`;
+
+function createAxiosClient(): AxiosInstance {
+  const instance = axios.create({
+    baseURL: API_BASE_URL,
+    withCredentials: false,
+    headers: {
+      // Only default JSON for JSON requests; FormData uploads will override automatically
+      'Accept': 'application/json',
+    },
+  });
+
+  instance.interceptors.response.use(
+    (response) => response,
+    (error: AxiosError) => {
+      const status = error.response?.status;
+      const statusText = error.response?.statusText;
+      const url = error.config?.url;
+      // Log concise error info for easier debugging (CORS, 4xx/5xx)
+      console.error('[API ERROR]', status, statusText, url);
+      return Promise.reject(error);
+    }
+  );
+
+  return instance;
+}
+
+const http = createAxiosClient();
 
 export interface PredictionData {
   data: string;
@@ -94,70 +124,86 @@ export interface LoanSimulationRequest {
 }
 
 class ApiService {
-  private async handleResponse<T>(response: Response): Promise<T> {
-    if (!response.ok) {
-      const errorText = await response.text();
-      let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-      
-      try {
-        const errorJson = JSON.parse(errorText);
-        errorMessage = errorJson.detail || errorJson.message || errorMessage;
-      } catch {
-        // Se não conseguir parsear como JSON, usa o texto raw
-        errorMessage = errorText || errorMessage;
-      }
-      
-      throw new Error(errorMessage);
+  private extractErrorMessage(error: unknown): never {
+    if (axios.isAxiosError(error)) {
+      const status = error.response?.status;
+      const statusText = error.response?.statusText;
+      const detail = (error.response?.data as any)?.detail || (error.response?.data as any)?.message;
+      const message = detail || `HTTP ${status}: ${statusText}`;
+      const err = new Error(message) as Error & { status?: number };
+      err.status = status;
+      throw err;
     }
-    
-    const data = await response.json();
-    return data;
+    throw error as Error;
   }
 
   // Upload do arquivo Excel com ambas as abas
   async uploadExcelBundle(file: File): Promise<{ message: string }> {
     const formData = new FormData();
     formData.append('file', file);
-
-    const response = await fetch(`${API_BASE_URL}/data/upload_excel_bundle`, {
-      method: 'POST',
-      body: formData,
-    });
-
-    return this.handleResponse<{ message: string }>(response);
+    try {
+      const { data } = await http.post<{ message: string }>(`/data/upload_excel_bundle`, formData, {
+        headers: {
+          // Let the browser set the correct multipart boundary; do not force JSON
+          'Content-Type': undefined as any,
+        },
+      });
+      return data;
+    } catch (error) {
+      this.extractErrorMessage(error);
+    }
   }
 
   // Visualizar dados processados
   async viewProcessed(limit: number = 50): Promise<ProcessedData[]> {
-    const response = await fetch(`${API_BASE_URL}/data/view_processed?limit=${limit}`);
-    return this.handleResponse<ProcessedData[]>(response);
+    try {
+      const { data } = await http.get<ProcessedData[]>(`/data/view_processed`, { params: { limit } });
+      return data;
+    } catch (error) {
+      this.extractErrorMessage(error);
+    }
+  }
+
+  // Carregar dados do último bundle processado (fallback)
+  async loadExcelBundle(limit: number = 50): Promise<ProcessedData[]> {
+    try {
+      const { data } = await http.get<ProcessedData[]>(`/data/load_excel_bundle`, { params: { limit } });
+      return data;
+    } catch (error) {
+      this.extractErrorMessage(error);
+    }
   }
 
   // Gerar previsão de fluxo de caixa
   async predictCashflow(params: { future_days: number }): Promise<PredictionData[]> {
-    const response = await fetch(`${API_BASE_URL}/predictions/cashflow`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(params),
-    });
-
-    return this.handleResponse<PredictionData[]>(response);
+    try {
+      const { data } = await http.post<PredictionData[]>(`/predictions/cashflow`, params, {
+        headers: { 'Content-Type': 'application/json' },
+      });
+      return data;
+    } catch (error) {
+      this.extractErrorMessage(error);
+    }
   }
 
   // Obter importância das features do modelo
   async getFeatureImportance(): Promise<Array<{ feature: string; importance: number }>> {
-    const response = await fetch(`${API_BASE_URL}/predictions/cashflow/feature_importance`);
-    return this.handleResponse<Array<{ feature: string; importance: number }>>(response);
+    try {
+      const { data } = await http.get<Array<{ feature: string; importance: number }>>(`/predictions/cashflow/feature_importance`);
+      return data;
+    } catch (error) {
+      this.extractErrorMessage(error);
+    }
   }
 
   // Obter ciclos operacionais do estado global
   async getOperationalCycles(): Promise<OperationalCyclesData> {
-    // Como os dados são processados e armazenados no estado global pelo upload,
-    // precisamos criar um endpoint específico para retornar esses dados
-    const response = await fetch(`${API_BASE_URL}/data/operational_cycles`);
-    return this.handleResponse<OperationalCyclesData>(response);
+    try {
+      const { data } = await http.get<OperationalCyclesData>(`/data/operational_cycles`);
+      return data;
+    } catch (error) {
+      this.extractErrorMessage(error);
+    }
   }
 
   // Simulação de cenários
@@ -165,7 +211,8 @@ class ApiService {
     variacaoEntradas: number,
     variacaoSaidas: number,
     diasSimulacao: number = 30,
-    numSimulacoes: number = 1000
+    numSimulacoes: number = 1000,
+    useAiCorrelation: boolean = false
   ): Promise<ScenarioResponse> {
     const params: ScenarioSimulationRequest = {
       variacao_entrada: variacaoEntradas / 100, // Converter de percentual para decimal
@@ -173,60 +220,69 @@ class ApiService {
       dias_simulacao: diasSimulacao,
       num_simulacoes: numSimulacoes,
     };
-
-    const response = await fetch(`${API_BASE_URL}/simulations/scenarios`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(params),
-    });
-
-    return this.handleResponse<ScenarioResponse>(response);
+    try {
+      const payload = { ...params, saldo_inicial_simulacao: undefined, use_ai_correlation: useAiCorrelation } as any;
+      const { data } = await http.post<ScenarioResponse>(`/simulations/scenarios`, payload, {
+        headers: { 'Content-Type': 'application/json' },
+      });
+      return data;
+    } catch (error) {
+      this.extractErrorMessage(error);
+    }
   }
 
   // Obter principais eventos de negócio
   async getKeyBusinessEvents(): Promise<KeyBusinessEventsResponse> {
-    const response = await fetch(`${API_BASE_URL}/simulations/key-business-events`);
-    return this.handleResponse<KeyBusinessEventsResponse>(response);
+    try {
+      const { data } = await http.get<KeyBusinessEventsResponse>(`/simulations/key-business-events`);
+      return data;
+    } catch (error) {
+      this.extractErrorMessage(error);
+    }
   }
 
   // Obter sugestões de empréstimos
   async getLoanSuggestions(): Promise<LoanSuggestionsResponse> {
-    const response = await fetch(`${API_BASE_URL}/simulations/loan-suggestions`);
-    return this.handleResponse<LoanSuggestionsResponse>(response);
+    try {
+      const { data } = await http.get<LoanSuggestionsResponse>(`/simulations/loan-suggestions`);
+      return data;
+    } catch (error) {
+      this.extractErrorMessage(error);
+    }
   }
 
   // Simulação de eventos de negócio
   async simulateBusinessEvents(request: BusinessEventSimulationRequest): Promise<any> {
-    const response = await fetch(`${API_BASE_URL}/simulations/scenario-simulation`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(request),
-    });
-
-    return this.handleResponse<any>(response);
+    try {
+      const { data } = await http.post<any>(`/simulations/scenario-simulation`, request, {
+        headers: { 'Content-Type': 'application/json' },
+      });
+      return data;
+    } catch (error) {
+      this.extractErrorMessage(error);
+    }
   }
 
   // Simulação de empréstimo
   async simulateLoanImpact(request: LoanSimulationRequest): Promise<any> {
-    const response = await fetch(`${API_BASE_URL}/simulations/scenario-simulation`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(request),
-    });
-
-    return this.handleResponse<any>(response);
+    try {
+      const { data } = await http.post<any>(`/simulations/scenario-simulation`, request, {
+        headers: { 'Content-Type': 'application/json' },
+      });
+      return data;
+    } catch (error) {
+      this.extractErrorMessage(error);
+    }
   }
 
   // Verificar saúde da API
   async healthCheck(): Promise<{ status: string; message: string }> {
-    const response = await fetch(`${API_BASE_URL.replace('/api', '')}/health`);
-    return this.handleResponse<{ status: string; message: string }>(response);
+    try {
+      const { data } = await http.get<{ status: string; message: string }>(`/health`, { baseURL: RAW_BASE_URL });
+      return data;
+    } catch (error) {
+      this.extractErrorMessage(error);
+    }
   }
 }
 
@@ -241,5 +297,8 @@ export const uploadExcelBundle = (file: File) =>
 
 export const viewProcessed = (limit?: number) => 
   apiService.viewProcessed(limit);
+
+export const loadExcelBundle = (limit?: number) =>
+  apiService.loadExcelBundle(limit);
 
 export { apiService as default };

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 import { TrendingUp, TrendingDown, DollarSign, Activity } from "lucide-react";
 import { apiService } from "@/lib/api";
@@ -15,15 +16,32 @@ export function VisaoGeral() {
     entradasSaidas: []
   });
   const [loading, setLoading] = useState(true);
+  const [rows, setRows] = useState<any[]>([]);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const apiData = await apiService.viewProcessed();
+        setErrorMsg(null);
+        let apiData: any[] | null = null;
+        try {
+          apiData = await apiService.viewProcessed();
+        } catch (err: any) {
+          if (err && (err as any).status === 404) {
+            try {
+              apiData = await apiService.loadExcelBundle();
+            } catch (err2: any) {
+              throw err2;
+            }
+          } else {
+            throw err;
+          }
+        }
         
         if (apiData && Array.isArray(apiData)) {
+          setRows(apiData.slice(0, 50));
           // Processar dados da API para o formato esperado
           const processedData = apiData;
           
@@ -76,9 +94,11 @@ export function VisaoGeral() {
         }
       } catch (error) {
         console.error('Erro ao carregar dados:', error);
+        const msg = error instanceof Error ? error.message : 'Erro desconhecido ao carregar dados';
+        setErrorMsg(msg);
         toast({
           title: "Erro ao carregar dados",
-          description: "Verifique se você fez o upload dos dados corretamente.",
+          description: msg || "Verifique se você fez o upload dos dados corretamente.",
           variant: "destructive",
         });
       } finally {
@@ -87,6 +107,14 @@ export function VisaoGeral() {
     };
 
     fetchData();
+
+    const onDataUpdated = () => {
+      fetchData();
+    };
+    window.addEventListener('data-updated', onDataUpdated);
+    return () => {
+      window.removeEventListener('data-updated', onDataUpdated);
+    };
   }, [toast]);
 
   const formatCurrency = (value: number) => {
@@ -221,6 +249,45 @@ export function VisaoGeral() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Últimos Registros */}
+      <Card className="shadow-card">
+        <CardHeader>
+          <CardTitle className="text-foreground">Últimos Registros Processados</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {errorMsg ? (
+            <div className="text-sm text-destructive">{errorMsg}</div>
+          ) : rows.length === 0 ? (
+            <div className="text-sm text-muted-foreground">Nenhum dado disponível. Faça o upload dos dados.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>data</TableHead>
+                    <TableHead>descricao</TableHead>
+                    <TableHead className="text-right">entrada</TableHead>
+                    <TableHead className="text-right">saida</TableHead>
+                    <TableHead className="text-right">saldo</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {rows.slice(0, 50).map((row: any, idx: number) => (
+                    <TableRow key={idx}>
+                      <TableCell>{row.data}</TableCell>
+                      <TableCell>{row.descricao ?? ''}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(row.entrada || 0)}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(row.saida || 0)}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(row.saldo || 0)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

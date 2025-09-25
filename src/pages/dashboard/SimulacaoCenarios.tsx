@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Slider } from "@/components/ui/slider";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Activity, TrendingUp, TrendingDown, AlertCircle, Trash2, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -49,6 +50,7 @@ export function SimulacaoCenarios() {
   const [resultados, setResultados] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [apiStatus, setApiStatus] = useState<'checking' | 'online' | 'offline'>('checking');
+  const [useAiCorrelation, setUseAiCorrelation] = useState<boolean>(false);
   const { toast } = useToast();
 
   const months = [
@@ -248,22 +250,49 @@ export function SimulacaoCenarios() {
       let response: Response;
 
       if (activeTab === "macroeconomic") {
-        payload = {
-          scenario_type: scenario,
-          seasonality_rules: seasonalityRules
-        };
+        // Nova rota opcional com correlação IA
+        try {
+          const result = await apiService.scenarioSimulation(0, 0, 30, 1000, useAiCorrelation);
+          const summary = (result as any)?.results_summary;
+          if (!summary) throw new Error('Estrutura não reconhecida em /simulations/scenarios');
 
-        console.log("Enviando payload para simulação macroeconômica:", payload);
-        
-        response = await fetch('http://localhost:8000/api/simulations/scenario-simulation', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(payload)
-        });
-        
-        console.log("Resposta da API (status):", response.status, response.statusText);
+          const probNegativo = (summary.prob_saldo_negativo_final ?? 0) * 100;
+          const distribuicao = [
+            { range: "Muito Negativo", frequency: Math.round((probNegativo / 100) * 300), value: summary.valor_minimo_esperado || 0 },
+            { range: "Negativo", frequency: Math.round((probNegativo / 100) * 400), value: (summary.valor_minimo_esperado || 0) * 0.5 },
+            { range: "Neutro", frequency: 200, value: 0 },
+            { range: "Positivo", frequency: 80, value: summary.valor_mediano_esperado || 0 },
+            { range: "Muito Positivo", frequency: 20, value: summary.valor_maximo_esperado || 0 }
+          ];
+
+          setResultados({
+            probabilidadeSaldoNegativo: probNegativo,
+            piorCenario: summary.valor_minimo_esperado || 0,
+            melhorCenario: summary.valor_maximo_esperado || 0,
+            cenarioMedio: summary.valor_mediano_esperado || 0,
+            distribuicao,
+            recomendacoes: [],
+            detalhes: summary,
+          });
+
+          toast({
+            title: "Simulação concluída!",
+            description: `Cenário ${scenario} simulado${useAiCorrelation ? ' com' : ' sem'} correlação IA.`,
+          });
+          return;
+        } catch (err) {
+          console.warn('Falha na rota /simulations/scenarios, usando fluxo legado.', err);
+          payload = {
+            scenario_type: scenario,
+            seasonality_rules: seasonalityRules
+          };
+          response = await fetch('http://localhost:8000/api/simulations/scenario-simulation', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          console.log("Resposta da API (status):", response.status, response.statusText);
+        }
       } else if (activeTab === "business_events") {
         // Simulação de eventos de negócio
         const filteredInflowModifiers = Array.from(inflowModifiers.values())
@@ -466,6 +495,14 @@ export function SimulacaoCenarios() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
+          {/* Toggle Correlação IA */}
+          <div className="flex items-center justify-between p-3 border rounded-lg">
+            <div>
+              <div className="font-medium text-foreground">Usar correlação IA</div>
+              <div className="text-sm text-muted-foreground">Permite que o backend utilize correlação baseada em IA nas séries.</div>
+            </div>
+            <Switch checked={useAiCorrelation} onCheckedChange={setUseAiCorrelation} />
+          </div>
           {/* Seleção de Cenário Macroeconômico */}
           <div>
             <Label className="text-base font-medium mb-4 block">
