@@ -164,13 +164,26 @@ export function VisaoGeral() {
     const yearsSet = new Set<number>();
 
     data.forEach((item) => {
-      const key = `${item.ano}-${item.mes.toString().padStart(2, '0')}`;
+      // Calcular ano e mês a partir da data se não existirem
+      let ano = item.ano;
+      let mes = item.mes;
+      
+      if (!ano || !mes) {
+        const date = parseISO(item.data);
+        ano = date.getFullYear();
+        mes = date.getMonth() + 1;
+      }
+      
+      const key = `${ano}-${mes.toString().padStart(2, '0')}`;
       if (!monthlyMap.has(key)) {
         monthlyMap.set(key, []);
       }
-      monthlyMap.get(key)!.push(item);
-      yearsSet.add(item.ano);
+      monthlyMap.get(key)!.push({ ...item, ano, mes });
+      yearsSet.add(ano);
     });
+    
+    console.log('Meses encontrados:', Array.from(monthlyMap.keys()));
+    console.log('Total de dados processados:', data.length);
 
     // Calcular KPIs mensais
     const monthly: MonthlyData[] = [];
