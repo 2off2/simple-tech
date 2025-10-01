@@ -11,14 +11,14 @@ interface UploadDadosProps {
 }
 
 export function UploadDados({ onUploadSuccess }: UploadDadosProps) {
-  const [excelFile, setExcelFile] = useState<File | null>(null);
+  const [inputFile, setInputFile] = useState<File | null>(null);
+  const [outputFile, setOutputFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
 
-  const onDropFile = useCallback((acceptedFiles: File[]) => {
+  const onDropInputFile = useCallback((acceptedFiles: File[]) => {
     const uploadedFile = acceptedFiles[0];
     if (uploadedFile) {
-      // Verificar formatos aceitos: .xlsx, .xls, .csv
       const lower = uploadedFile.name.toLowerCase();
       const isAccepted = lower.endsWith('.xlsx') || lower.endsWith('.xls') || lower.endsWith('.csv');
       if (!isAccepted) {
@@ -29,13 +29,39 @@ export function UploadDados({ onUploadSuccess }: UploadDadosProps) {
         });
         return;
       }
-      
-      setExcelFile(uploadedFile);
+      setInputFile(uploadedFile);
     }
   }, [toast]);
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop: onDropFile,
+  const onDropOutputFile = useCallback((acceptedFiles: File[]) => {
+    const uploadedFile = acceptedFiles[0];
+    if (uploadedFile) {
+      const lower = uploadedFile.name.toLowerCase();
+      const isAccepted = lower.endsWith('.xlsx') || lower.endsWith('.xls') || lower.endsWith('.csv');
+      if (!isAccepted) {
+        toast({
+          title: "Formato inválido",
+          description: "Selecione .xlsx, .xls ou .csv.",
+          variant: "destructive",
+        });
+        return;
+      }
+      setOutputFile(uploadedFile);
+    }
+  }, [toast]);
+
+  const inputDropzone = useDropzone({
+    onDrop: onDropInputFile,
+    accept: {
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+      'application/vnd.ms-excel': ['.xls'],
+      'text/csv': ['.csv']
+    },
+    multiple: false
+  });
+
+  const outputDropzone = useDropzone({
+    onDrop: onDropOutputFile,
     accept: {
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
       'application/vnd.ms-excel': ['.xls'],
@@ -45,10 +71,10 @@ export function UploadDados({ onUploadSuccess }: UploadDadosProps) {
   });
 
   const handleAnalyze = async () => {
-    if (!excelFile) {
+    if (!inputFile) {
       toast({
         title: "Erro",
-        description: "Por favor, selecione o arquivo Excel antes de prosseguir.",
+        description: "Por favor, selecione o arquivo de entrada antes de prosseguir.",
         variant: "destructive",
       });
       return;
@@ -57,21 +83,20 @@ export function UploadDados({ onUploadSuccess }: UploadDadosProps) {
     setUploading(true);
     
     try {
-      await apiService.uploadExcelBundle(excelFile);
+      await apiService.uploadExcelBundle(inputFile);
       
       toast({
         title: "Sucesso!",
-        description: "Arquivo enviado e processado com sucesso.",
+        description: "Arquivos enviados e processados com sucesso.",
       });
       
-      // Notificar outras telas para recarregar (Visão Geral)
       window.dispatchEvent(new Event('data-updated'));
       onUploadSuccess?.();
     } catch (error) {
       console.error('Erro no upload:', error);
       toast({
         title: "Erro",
-        description: "Erro ao processar o arquivo. Verifique se contém as abas 'FluxoDeCaixa' e 'DadosContabeis'.",
+        description: "Erro ao processar os arquivos. Verifique se contém as abas 'FluxoDeCaixa' e 'DadosContabeis'.",
         variant: "destructive",
       });
     } finally {
@@ -88,39 +113,40 @@ export function UploadDados({ onUploadSuccess }: UploadDadosProps) {
         </p>
       </div>
 
-      {/* Upload Area */}
-      <div className="max-w-2xl mx-auto">
+      {/* Upload Areas */}
+      <div className="max-w-4xl mx-auto space-y-6">
+        {/* Card 1: Planilhas de Entrada (Obrigatório) */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Arquivo de Dados da Empresa (.xlsx / .xls / .csv)</CardTitle>
+            <CardTitle className="text-lg">Planilhas de Entrada (Obrigatório)</CardTitle>
             <p className="text-sm text-muted-foreground">
               O arquivo deve conter duas abas: <strong>FluxoDeCaixa</strong> e <strong>DadosContabeis</strong>
             </p>
           </CardHeader>
           <CardContent>
             <div
-              {...getRootProps()}
+              {...inputDropzone.getRootProps()}
               className={`
                 border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors
-                ${isDragActive ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}
+                ${inputDropzone.isDragActive ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}
               `}
             >
-              <input {...getInputProps()} />
+              <input {...inputDropzone.getInputProps()} />
               <div className="flex flex-col items-center gap-4">
                 <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
                   <Upload className="h-8 w-8 text-primary" />
                 </div>
                 
-                {excelFile ? (
+                {inputFile ? (
                   <div className="flex items-center gap-3 text-primary">
                     <FileText className="h-5 w-5" />
-                    <span className="font-medium">{excelFile.name}</span>
+                    <span className="font-medium">{inputFile.name}</span>
                     <Check className="h-5 w-5" />
                   </div>
                 ) : (
                   <div>
                     <p className="text-lg font-medium text-foreground mb-2">
-                      {isDragActive ? 'Solte o arquivo aqui' : 'Arraste e solte seu arquivo Excel'}
+                      {inputDropzone.isDragActive ? 'Solte o arquivo aqui' : 'Arraste e solte seu arquivo de entrada'}
                     </p>
                     <p className="text-sm text-muted-foreground">
                       ou clique para selecionar (.xlsx, .xls, .csv)
@@ -130,21 +156,62 @@ export function UploadDados({ onUploadSuccess }: UploadDadosProps) {
               </div>
             </div>
             
-            {/* Instruções */}
             <div className="mt-4 p-4 bg-muted/50 rounded-lg">
-              <h4 className="font-medium text-foreground mb-2">Estrutura do arquivo Excel:</h4>
+              <h4 className="font-medium text-foreground mb-2">Estrutura do arquivo de entrada:</h4>
               <ul className="text-sm text-muted-foreground space-y-1">
                 <li>• <strong>Aba "FluxoDeCaixa":</strong> Dados do regime de caixa (entradas e saídas efetivas)</li>
                 <li>• <strong>Aba "DadosContabeis":</strong> Dados do regime de competência (faturamento e custos)</li>
-                <li>• <strong>CSV:</strong> Opcionalmente, envie arquivo .csv consolidado</li>
               </ul>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Card 2: Planilhas de Saída (Opcional) */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Planilhas de Saída (Opcional)</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Arquivo complementar com dados de saída ou projeções
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div
+              {...outputDropzone.getRootProps()}
+              className={`
+                border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors
+                ${outputDropzone.isDragActive ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}
+              `}
+            >
+              <input {...outputDropzone.getInputProps()} />
+              <div className="flex flex-col items-center gap-4">
+                <div className="w-16 h-16 bg-muted/10 rounded-full flex items-center justify-center">
+                  <Upload className="h-8 w-8 text-muted-foreground" />
+                </div>
+                
+                {outputFile ? (
+                  <div className="flex items-center gap-3 text-primary">
+                    <FileText className="h-5 w-5" />
+                    <span className="font-medium">{outputFile.name}</span>
+                    <Check className="h-5 w-5" />
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-lg font-medium text-foreground mb-2">
+                      {outputDropzone.isDragActive ? 'Solte o arquivo aqui' : 'Arraste e solte seu arquivo de saída'}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      ou clique para selecionar (.xlsx, .xls, .csv)
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Action Button */}
-      {excelFile && (
+      {inputFile && (
         <div className="flex justify-center">
           <Button
             onClick={handleAnalyze}
