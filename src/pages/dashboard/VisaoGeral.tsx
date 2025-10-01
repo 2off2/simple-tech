@@ -1,153 +1,250 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
-import { TrendingUp, TrendingDown, DollarSign, Activity } from "lucide-react";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from "recharts";
+import { TrendingUp, TrendingDown, DollarSign, Activity, Calendar } from "lucide-react";
 import { apiService } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { formatCurrency } from "@/lib/utils";
+import { format, parseISO } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+interface MonthlyData {
+  ano: number;
+  mes: number;
+  mes_ano: string;
+  total_entradas: number;
+  total_saidas: number;
+  fluxo_liquido: number;
+  saldo_final_mes: number;
+  qtd_transacoes: number;
+  ticket_medio: number;
+}
 
 export function VisaoGeral() {
-  const [data, setData] = useState({
+  const [globalStats, setGlobalStats] = useState({
+    saldoAtual: 0,
+    dataAtualizacao: ""
+  });
+  
+  const [periodStats, setPeriodStats] = useState({
     totalEntradas: 0,
     totalSaidas: 0,
-    saldoAtual: 0,
-    fluxoLiquido: 0,
-    evolucaoSaldo: [],
-    entradasSaidas: []
+    fluxoLiquido: 0
   });
+
+  const [dateRange, setDateRange] = useState({
+    from: "1900-01-01",
+    to: "2100-12-31"
+  });
+
+  const [chartData, setChartData] = useState<{
+    evolucaoSaldo: { data: string; saldo: number }[];
+    entradasSaidas: { mes: string; entradas: number; saidas: number }[];
+  }>({ evolucaoSaldo: [], entradasSaidas: [] });
+  const [monthlyData, setMonthlyData] = useState<MonthlyData[]>([]);
+  const [selectedYear, setSelectedYear] = useState<string>("all");
+  const [availableYears, setAvailableYears] = useState<number[]>([]);
+  const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [rows, setRows] = useState<any[]>([]);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        setErrorMsg(null);
-        let apiData: any[] | null = null;
-        try {
-          apiData = await apiService.viewProcessed();
-        } catch (err: any) {
-          if (err && (err as any).status === 404) {
-            try {
-              apiData = await apiService.loadExcelBundle();
-            } catch (err2: any) {
-              throw err2;
-            }
-          } else {
-            throw err;
-          }
-        }
-        
-        if (apiData && Array.isArray(apiData)) {
-          setRows(apiData.slice(0, 50));
-          // Processar dados da API para o formato esperado
-          const processedData = apiData;
-          
-          // Calcular métricas usando as colunas corretas da API
-          const entradas = processedData.filter((item: any) => item.entrada > 0);
-          const saidas = processedData.filter((item: any) => item.saida > 0);
-          
-          const totalEntradas = entradas.reduce((sum: number, item: any) => sum + item.entrada, 0);
-          const totalSaidas = saidas.reduce((sum: number, item: any) => sum + item.saida, 0);
-          const saldoAtual = totalEntradas - totalSaidas;
-          
-          // Processar evolução do saldo por data
-          const saldoPorData = new Map();
-          processedData.forEach((item: any) => {
-            const data = item.data;
-            if (!saldoPorData.has(data)) {
-              saldoPorData.set(data, 0);
-            }
-            saldoPorData.set(data, saldoPorData.get(data) + item.saldo);
-          });
-          
-          const evolucaoSaldo = Array.from(saldoPorData.entries())
-            .map(([data, saldo]) => ({ data, saldo }))
-            .sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime());
-
-          // Processar entradas vs saídas por mês
-          const entradasSaidasPorMes = new Map();
-          processedData.forEach((item: any) => {
-            const mes = `${item.ano}-${item.mes.toString().padStart(2, '0')}`;
-            if (!entradasSaidasPorMes.has(mes)) {
-              entradasSaidasPorMes.set(mes, { entradas: 0, saidas: 0 });
-            }
-            const atual = entradasSaidasPorMes.get(mes);
-            atual.entradas += item.entrada;
-            atual.saidas += item.saida;
-          });
-
-          const entradasSaidas = Array.from(entradasSaidasPorMes.entries())
-            .map(([mes, valores]) => ({ mes, ...valores }))
-            .sort((a, b) => a.mes.localeCompare(b.mes));
-
-          setData({
-            totalEntradas,
-            totalSaidas,
-            saldoAtual,
-            fluxoLiquido: saldoAtual,
-            evolucaoSaldo,
-            entradasSaidas
-          });
-        }
-      } catch (error) {
-        console.error('Erro ao carregar dados:', error);
-        const msg = error instanceof Error ? error.message : 'Erro desconhecido ao carregar dados';
-        setErrorMsg(msg);
-        toast({
-          title: "Erro ao carregar dados",
-          description: msg || "Verifique se você fez o upload dos dados corretamente.",
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
+    fetchAllData();
 
     const onDataUpdated = () => {
-      fetchData();
+      fetchAllData();
     };
     window.addEventListener('data-updated', onDataUpdated);
     return () => {
       window.removeEventListener('data-updated', onDataUpdated);
     };
-  }, [toast]);
+  }, [dateRange]);
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(value);
+  const fetchAllData = async () => {
+    try {
+      setLoading(true);
+
+      // 1. Buscar estatísticas globais (saldo atual - sem paginação)
+      const stats = await apiService.getStatistics();
+      setGlobalStats({
+        saldoAtual: stats.ultimo_saldo ?? 0,
+        dataAtualizacao: stats.data_atualizacao || new Date().toISOString()
+      });
+
+      // 2. Buscar dados do período (para gráficos e KPIs do período)
+      const periodData = await apiService.viewProcessed({
+        start_date: dateRange.from,
+        end_date: dateRange.to,
+        order: 'asc',
+        limit: 5000
+      });
+
+      if (periodData && periodData.length > 0) {
+        // Calcular KPIs do período
+        const totalEntradas = periodData.reduce((sum, item) => sum + (item.entrada || 0), 0);
+        const totalSaidas = periodData.reduce((sum, item) => sum + (item.saida || 0), 0);
+        
+        setPeriodStats({
+          totalEntradas,
+          totalSaidas,
+          fluxoLiquido: totalEntradas - totalSaidas
+        });
+
+        // Processar dados para gráficos
+        processChartData(periodData);
+        
+        // Processar dados mensais
+        processMonthlyData(periodData);
+      } else {
+        setPeriodStats({ totalEntradas: 0, totalSaidas: 0, fluxoLiquido: 0 });
+        setChartData({ evolucaoSaldo: [], entradasSaidas: [] });
+        setMonthlyData([]);
+      }
+
+      // 3. Buscar transações recentes (últimas 50, sem filtro de data)
+      const recent = await apiService.viewProcessed({
+        order: 'desc',
+        limit: 50
+      });
+      setRecentTransactions(recent || []);
+
+    } catch (error) {
+      console.error('Erro ao carregar dados:', error);
+      toast({
+        title: "Erro ao carregar dados",
+        description: error instanceof Error ? error.message : "Erro desconhecido",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const processChartData = (data: any[]) => {
+    // Agrupar por data para evolução do saldo
+    const saldoPorData = new Map<string, number>();
+    const entradasSaidasPorMes = new Map<string, { entradas: number; saidas: number }>();
+
+    data.forEach((item) => {
+      // Saldo por data
+      const dataStr = item.data;
+      if (!saldoPorData.has(dataStr)) {
+        saldoPorData.set(dataStr, 0);
+      }
+      saldoPorData.set(dataStr, item.saldo || 0);
+
+      // Entradas/Saídas por mês
+      const mesAno = `${item.ano}-${item.mes.toString().padStart(2, '0')}`;
+      if (!entradasSaidasPorMes.has(mesAno)) {
+        entradasSaidasPorMes.set(mesAno, { entradas: 0, saidas: 0 });
+      }
+      const mesData = entradasSaidasPorMes.get(mesAno)!;
+      mesData.entradas += item.entrada || 0;
+      mesData.saidas += item.saida || 0;
+    });
+
+    // Converter para array ordenado
+    const evolucaoSaldo = Array.from(saldoPorData.entries())
+      .map(([data, saldo]) => ({ data, saldo }))
+      .sort((a, b) => a.data.localeCompare(b.data));
+
+    const entradasSaidas = Array.from(entradasSaidasPorMes.entries())
+      .map(([mes, valores]) => ({ mes, ...valores }))
+      .sort((a, b) => a.mes.localeCompare(b.mes));
+
+    setChartData({ evolucaoSaldo, entradasSaidas });
+  };
+
+  const processMonthlyData = (data: any[]) => {
+    // Agrupar por ano/mês
+    const monthlyMap = new Map<string, any[]>();
+    const yearsSet = new Set<number>();
+
+    data.forEach((item) => {
+      const key = `${item.ano}-${item.mes.toString().padStart(2, '0')}`;
+      if (!monthlyMap.has(key)) {
+        monthlyMap.set(key, []);
+      }
+      monthlyMap.get(key)!.push(item);
+      yearsSet.add(item.ano);
+    });
+
+    // Calcular KPIs mensais
+    const monthly: MonthlyData[] = [];
+    
+    monthlyMap.forEach((items, mesAno) => {
+      const [ano, mes] = mesAno.split('-').map(Number);
+      
+      const totalEntradas = items.reduce((sum, item) => sum + (item.entrada || 0), 0);
+      const totalSaidas = items.reduce((sum, item) => sum + (item.saida || 0), 0);
+      const fluxoLiquido = totalEntradas - totalSaidas;
+      
+      // Saldo final do mês = último saldo do mês
+      const sortedItems = [...items].sort((a, b) => a.data.localeCompare(b.data));
+      const saldoFinalMes = sortedItems[sortedItems.length - 1]?.saldo || 0;
+      
+      const qtdTransacoes = items.length;
+      const entradasCount = items.filter(item => (item.entrada || 0) > 0).length;
+      const ticketMedio = entradasCount > 0 ? totalEntradas / entradasCount : 0;
+
+      monthly.push({
+        ano,
+        mes,
+        mes_ano: mesAno,
+        total_entradas: totalEntradas,
+        total_saidas: totalSaidas,
+        fluxo_liquido: fluxoLiquido,
+        saldo_final_mes: saldoFinalMes,
+        qtd_transacoes: qtdTransacoes,
+        ticket_medio: ticketMedio
+      });
+    });
+
+    // Ordenar por ano/mês
+    monthly.sort((a, b) => {
+      if (a.ano !== b.ano) return a.ano - b.ano;
+      return a.mes - b.mes;
+    });
+
+    setMonthlyData(monthly);
+    setAvailableYears(Array.from(yearsSet).sort());
+  };
+
+  const filteredMonthlyData = selectedYear === "all" 
+    ? monthlyData 
+    : monthlyData.filter(m => m.ano === parseInt(selectedYear));
 
   const metrics = [
     {
       title: "Total de Entradas",
-      value: data.totalEntradas,
+      subtitle: "(Período selecionado)",
+      value: periodStats.totalEntradas,
       icon: TrendingUp,
       trend: "positive"
     },
     {
       title: "Total de Saídas",
-      value: data.totalSaidas,
+      subtitle: "(Período selecionado)",
+      value: periodStats.totalSaidas,
       icon: TrendingDown,
       trend: "negative"
     },
     {
       title: "Saldo Atual",
-      value: data.saldoAtual,
+      subtitle: "(Global)",
+      value: globalStats.saldoAtual,
       icon: DollarSign,
-      trend: "positive"
+      trend: "neutral"
     },
     {
       title: "Fluxo de Caixa Líquido",
-      value: data.fluxoLiquido,
+      subtitle: "(Período selecionado)",
+      value: periodStats.fluxoLiquido,
       icon: Activity,
-      trend: "positive"
+      trend: periodStats.fluxoLiquido >= 0 ? "positive" : "negative"
     }
   ];
 
@@ -161,11 +258,24 @@ export function VisaoGeral() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">Visão Geral Financeira</h1>
-        <p className="text-muted-foreground mt-2">
-          Resumo da saúde financeira atual da sua empresa
-        </p>
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Visão Geral Financeira</h1>
+          <p className="text-muted-foreground mt-2">
+            Resumo da saúde financeira atual da sua empresa
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Última atualização: {globalStats.dataAtualizacao ? format(parseISO(globalStats.dataAtualizacao), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }) : "-"}
+          </p>
+        </div>
+
+        {/* Filtros de período - Placeholder por enquanto */}
+        <div className="flex gap-2 items-center">
+          <Calendar className="h-4 w-4 text-muted-foreground" />
+          <span className="text-sm text-muted-foreground">
+            Período: {dateRange.from} a {dateRange.to}
+          </span>
+        </div>
       </div>
 
       {/* Grid de Métricas */}
@@ -175,11 +285,18 @@ export function VisaoGeral() {
           return (
             <Card key={metric.title} className="shadow-card">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {metric.title}
-                </CardTitle>
+                <div>
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    {metric.title}
+                  </CardTitle>
+                  <CardDescription className="text-xs mt-1">
+                    {metric.subtitle}
+                  </CardDescription>
+                </div>
                 <Icon className={`h-4 w-4 ${
-                  metric.trend === 'positive' ? 'text-primary' : 'text-destructive'
+                  metric.trend === 'positive' ? 'text-primary' : 
+                  metric.trend === 'negative' ? 'text-destructive' : 
+                  'text-muted-foreground'
                 }`} />
               </CardHeader>
               <CardContent>
@@ -198,10 +315,11 @@ export function VisaoGeral() {
         <Card className="shadow-card">
           <CardHeader>
             <CardTitle className="text-foreground">Evolução do Saldo</CardTitle>
+            <CardDescription>Baseado no período selecionado</CardDescription>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={data.evolucaoSaldo}>
+              <LineChart data={chartData.evolucaoSaldo}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis dataKey="data" stroke="hsl(var(--muted-foreground))" />
                 <YAxis stroke="hsl(var(--muted-foreground))" />
@@ -211,6 +329,7 @@ export function VisaoGeral() {
                     border: "1px solid hsl(var(--border))",
                     borderRadius: "6px"
                   }}
+                  formatter={(value: number) => formatCurrency(value)}
                 />
                 <Line 
                   type="monotone" 
@@ -227,11 +346,12 @@ export function VisaoGeral() {
         {/* Entradas vs Saídas */}
         <Card className="shadow-card">
           <CardHeader>
-            <CardTitle className="text-foreground">Entradas vs. Saídas</CardTitle>
+            <CardTitle className="text-foreground">Entradas vs. Saídas (Mensal)</CardTitle>
+            <CardDescription>Baseado no período selecionado</CardDescription>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={data.entradasSaidas}>
+              <BarChart data={chartData.entradasSaidas}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis dataKey="mes" stroke="hsl(var(--muted-foreground))" />
                 <YAxis stroke="hsl(var(--muted-foreground))" />
@@ -241,45 +361,160 @@ export function VisaoGeral() {
                     border: "1px solid hsl(var(--border))",
                     borderRadius: "6px"
                   }}
+                  formatter={(value: number) => formatCurrency(value)}
                 />
-                <Bar dataKey="entradas" fill="hsl(var(--primary))" />
-                <Bar dataKey="saidas" fill="hsl(var(--destructive))" />
+                <Legend />
+                <Bar dataKey="entradas" fill="hsl(var(--primary))" name="Entradas" />
+                <Bar dataKey="saidas" fill="hsl(var(--destructive))" name="Saídas" />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
       </div>
 
-      {/* Últimos Registros */}
+      {/* Visão Mensal por Ano */}
       <Card className="shadow-card">
         <CardHeader>
-          <CardTitle className="text-foreground">Últimos Registros Processados</CardTitle>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle className="text-foreground">Visão Mensal por Ano</CardTitle>
+              <CardDescription>KPIs essenciais agrupados por mês/ano</CardDescription>
+            </div>
+            <Select value={selectedYear} onValueChange={setSelectedYear}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filtrar por ano" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os anos</SelectItem>
+                {availableYears.map(year => (
+                  <SelectItem key={year} value={year.toString()}>
+                    {year}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </CardHeader>
         <CardContent>
-          {errorMsg ? (
-            <div className="text-sm text-destructive">{errorMsg}</div>
-          ) : rows.length === 0 ? (
-            <div className="text-sm text-muted-foreground">Nenhum dado disponível. Faça o upload dos dados.</div>
+          {filteredMonthlyData.length === 0 ? (
+            <div className="text-sm text-muted-foreground text-center py-8">
+              Nenhum dado disponível para o período selecionado
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {/* Gráfico de Saldo Mensal */}
+              <div>
+                <h3 className="text-sm font-medium mb-4">Saldo Final por Mês</h3>
+                <ResponsiveContainer width="100%" height={250}>
+                  <LineChart data={filteredMonthlyData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="mes_ano" stroke="hsl(var(--muted-foreground))" />
+                    <YAxis stroke="hsl(var(--muted-foreground))" />
+                    <Tooltip 
+                      contentStyle={{
+                        backgroundColor: "hsl(var(--card))",
+                        border: "1px solid hsl(var(--border))",
+                        borderRadius: "6px"
+                      }}
+                      formatter={(value: number) => formatCurrency(value)}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="saldo_final_mes" 
+                      stroke="hsl(var(--primary))" 
+                      strokeWidth={2}
+                      dot={{ fill: "hsl(var(--primary))", r: 3 }}
+                      name="Saldo Final"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Tabela de KPIs Mensais */}
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Mês/Ano</TableHead>
+                      <TableHead className="text-right">Entradas</TableHead>
+                      <TableHead className="text-right">Saídas</TableHead>
+                      <TableHead className="text-right">Fluxo Líquido</TableHead>
+                      <TableHead className="text-right">Saldo Final</TableHead>
+                      <TableHead className="text-right">Qtd. Trans.</TableHead>
+                      <TableHead className="text-right">Ticket Médio</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredMonthlyData.map((row) => (
+                      <TableRow key={row.mes_ano}>
+                        <TableCell className="font-medium">{row.mes_ano}</TableCell>
+                        <TableCell className="text-right text-primary">
+                          {formatCurrency(row.total_entradas)}
+                        </TableCell>
+                        <TableCell className="text-right text-destructive">
+                          {formatCurrency(row.total_saidas)}
+                        </TableCell>
+                        <TableCell className={`text-right font-medium ${
+                          row.fluxo_liquido >= 0 ? 'text-primary' : 'text-destructive'
+                        }`}>
+                          {formatCurrency(row.fluxo_liquido)}
+                        </TableCell>
+                        <TableCell className="text-right font-medium">
+                          {formatCurrency(row.saldo_final_mes)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {row.qtd_transacoes}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {formatCurrency(row.ticket_medio)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Transações Recentes */}
+      <Card className="shadow-card">
+        <CardHeader>
+          <CardTitle className="text-foreground">Transações Recentes</CardTitle>
+          <CardDescription>Últimas 50 transações processadas</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {recentTransactions.length === 0 ? (
+            <div className="text-sm text-muted-foreground text-center py-8">
+              Nenhuma transação disponível. Faça o upload dos dados.
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>data</TableHead>
-                    <TableHead>descricao</TableHead>
-                    <TableHead className="text-right">entrada</TableHead>
-                    <TableHead className="text-right">saida</TableHead>
-                    <TableHead className="text-right">saldo</TableHead>
+                    <TableHead>Data</TableHead>
+                    <TableHead>Descrição</TableHead>
+                    <TableHead className="text-right">Entrada</TableHead>
+                    <TableHead className="text-right">Saída</TableHead>
+                    <TableHead className="text-right">Saldo</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {rows.slice(0, 50).map((row: any, idx: number) => (
+                  {recentTransactions.map((row: any, idx: number) => (
                     <TableRow key={idx}>
                       <TableCell>{row.data}</TableCell>
-                      <TableCell>{row.descricao ?? ''}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(row.entrada || 0)}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(row.saida || 0)}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(row.saldo || 0)}</TableCell>
+                      <TableCell>{row.descricao ?? '-'}</TableCell>
+                      <TableCell className="text-right text-primary">
+                        {row.entrada > 0 ? formatCurrency(row.entrada) : '-'}
+                      </TableCell>
+                      <TableCell className="text-right text-destructive">
+                        {row.saida > 0 ? formatCurrency(row.saida) : '-'}
+                      </TableCell>
+                      <TableCell className="text-right font-medium">
+                        {formatCurrency(row.saldo || 0)}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

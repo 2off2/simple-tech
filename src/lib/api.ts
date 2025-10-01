@@ -57,6 +57,13 @@ export interface ProcessedData {
   dia: number;
 }
 
+export interface StatisticsData {
+  ultimo_saldo: number;
+  total_entradas: number;
+  total_saidas: number;
+  data_atualizacao?: string;
+}
+
 export interface ScenarioSimulationRequest {
   variacao_entrada: number;
   variacao_saida: number;
@@ -154,10 +161,25 @@ class ApiService {
     }
   }
 
-  // Visualizar dados processados
-  async viewProcessed(limit: number = 50): Promise<ProcessedData[]> {
+  // Obter estatísticas globais
+  async getStatistics(): Promise<StatisticsData> {
     try {
-      const { data } = await http.get<ProcessedData[]>(`/data/view_processed`, { params: { limit } });
+      const { data } = await http.get<StatisticsData>(`/data/statistics`);
+      return data;
+    } catch (error) {
+      this.extractErrorMessage(error);
+    }
+  }
+
+  // Visualizar dados processados
+  async viewProcessed(params?: { 
+    limit?: number; 
+    start_date?: string; 
+    end_date?: string; 
+    order?: 'asc' | 'desc' 
+  }): Promise<ProcessedData[]> {
+    try {
+      const { data } = await http.get<ProcessedData[]>(`/data/view_processed`, { params });
       return data;
     } catch (error) {
       this.extractErrorMessage(error);
@@ -295,8 +317,12 @@ export const predictCashflow = (params: { future_days: number }) =>
 export const uploadExcelBundle = (file: File) => 
   apiService.uploadExcelBundle(file);
 
-export const viewProcessed = (limit?: number) => 
-  apiService.viewProcessed(limit);
+export const viewProcessed = (params?: { 
+  limit?: number; 
+  start_date?: string; 
+  end_date?: string; 
+  order?: 'asc' | 'desc' 
+}) => apiService.viewProcessed(params);
 
 export const loadExcelBundle = (limit?: number) =>
   apiService.loadExcelBundle(limit);
