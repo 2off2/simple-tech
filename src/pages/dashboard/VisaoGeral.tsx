@@ -53,39 +53,58 @@ export function VisaoGeral() {
 
   useEffect(() => {
     fetchAllData();
+  }, [dateRange]);
 
+  useEffect(() => {
     const onDataUpdated = () => {
+      console.log('Evento data-updated recebido, recarregando dados...');
       fetchAllData();
     };
     window.addEventListener('data-updated', onDataUpdated);
     return () => {
       window.removeEventListener('data-updated', onDataUpdated);
     };
-  }, [dateRange]);
+  }, []);
 
   const fetchAllData = async () => {
     try {
       setLoading(true);
+      console.log('Iniciando fetchAllData...');
 
       // 1. Buscar estatísticas globais (saldo atual - sem paginação)
       const stats = await apiService.getStatistics();
+      console.log('Estatísticas recebidas:', stats);
       setGlobalStats({
         saldoAtual: stats.ultimo_saldo ?? 0,
         dataAtualizacao: stats.data_atualizacao || new Date().toISOString()
       });
 
       // 2. Buscar dados do período (para gráficos e KPIs do período)
+      console.log('Buscando dados do período:', { from: dateRange.from, to: dateRange.to });
       const periodData = await apiService.viewProcessed({
         start_date: dateRange.from,
         end_date: dateRange.to,
         order: 'asc',
         limit: 5000
       });
+      console.log('Dados do período recebidos:', periodData);
 
       if (periodData && periodData.length > 0) {
         // Calcular KPIs do período
         const totalEntradas = periodData.reduce((sum, item) => sum + (item.entrada || 0), 0);
         const totalSaidas = periodData.reduce((sum, item) => sum + (item.saida || 0), 0);
+        
+      console.log('Dados do período processados:', {
+        totalEntradas,
+        totalSaidas,
+        fluxoLiquido: totalEntradas - totalSaidas,
+        dados: periodData
+      });
+      
+      // Debug específico para saídas
+      const saidas = periodData.filter(item => item.saida > 0);
+      console.log('Transações com saída encontradas:', saidas);
+      console.log('Total de saídas calculado:', totalSaidas);
         
         setPeriodStats({
           totalEntradas,
@@ -99,6 +118,7 @@ export function VisaoGeral() {
         // Processar dados mensais
         processMonthlyData(periodData);
       } else {
+        console.log('Nenhum dado encontrado para o período');
         setPeriodStats({ totalEntradas: 0, totalSaidas: 0, fluxoLiquido: 0 });
         setChartData({ evolucaoSaldo: [], entradasSaidas: [] });
         setMonthlyData([]);

@@ -161,6 +161,28 @@ class ApiService {
     }
   }
 
+  // Upload de múltiplos arquivos (entradas e/ou saídas)
+  async uploadExcelBundleMulti(files: File[]): Promise<{ message: string }> {
+    const formData = new FormData();
+    // O backend aceita tanto 'files' (lista) quanto 'file' único.
+    for (const f of files) {
+      formData.append('files', f);
+    }
+    if (files.length === 0) {
+      throw new Error('Nenhum arquivo selecionado.');
+    }
+    try {
+      const { data } = await http.post<{ message: string }>(`/data/upload_excel_bundle`, formData, {
+        headers: {
+          'Content-Type': undefined as any,
+        },
+      });
+      return data;
+    } catch (error) {
+      this.extractErrorMessage(error);
+    }
+  }
+
   // Obter estatísticas globais
   async getStatistics(): Promise<StatisticsData> {
     try {

@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
-import { Upload, FileText, Check } from "lucide-react";
+import { Upload, FileText, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -11,42 +11,50 @@ interface UploadDadosProps {
 }
 
 export function UploadDados({ onUploadSuccess }: UploadDadosProps) {
-  const [inputFile, setInputFile] = useState<File | null>(null);
-  const [outputFile, setOutputFile] = useState<File | null>(null);
+  const [inputFiles, setInputFiles] = useState<File[]>([]);
+  const [outputFiles, setOutputFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
 
+  const removeInputFile = useCallback((index: number) => {
+    setInputFiles(prev => prev.filter((_, i) => i !== index));
+  }, []);
+
+  const removeOutputFile = useCallback((index: number) => {
+    setOutputFiles(prev => prev.filter((_, i) => i !== index));
+  }, []);
+
   const onDropInputFile = useCallback((acceptedFiles: File[]) => {
-    const uploadedFile = acceptedFiles[0];
-    if (uploadedFile) {
-      const lower = uploadedFile.name.toLowerCase();
-      const isAccepted = lower.endsWith('.xlsx') || lower.endsWith('.xls') || lower.endsWith('.csv');
-      if (!isAccepted) {
-        toast({
-          title: "Formato inválido",
-          description: "Selecione .xlsx, .xls ou .csv.",
-          variant: "destructive",
-        });
-        return;
-      }
-      setInputFile(uploadedFile);
+    const valid = acceptedFiles.filter(f => {
+      const lower = f.name.toLowerCase();
+      return lower.endsWith('.xlsx') || lower.endsWith('.xls') || lower.endsWith('.csv');
+    });
+    if (valid.length !== acceptedFiles.length) {
+      toast({
+        title: "Formato inválido",
+        description: "Selecione .xlsx, .xls ou .csv.",
+        variant: "destructive",
+      });
+    }
+    if (valid.length > 0) {
+      setInputFiles(prev => [...prev, ...valid]);
     }
   }, [toast]);
 
   const onDropOutputFile = useCallback((acceptedFiles: File[]) => {
-    const uploadedFile = acceptedFiles[0];
-    if (uploadedFile) {
-      const lower = uploadedFile.name.toLowerCase();
-      const isAccepted = lower.endsWith('.xlsx') || lower.endsWith('.xls') || lower.endsWith('.csv');
-      if (!isAccepted) {
+    const valid = acceptedFiles.filter(f => {
+      const lower = f.name.toLowerCase();
+      return lower.endsWith('.xlsx') || lower.endsWith('.xls') || lower.endsWith('.csv');
+    });
+    if (valid.length !== acceptedFiles.length) {
         toast({
           title: "Formato inválido",
           description: "Selecione .xlsx, .xls ou .csv.",
           variant: "destructive",
         });
-        return;
-      }
-      setOutputFile(uploadedFile);
+    }
+    if (valid.length > 0) {
+      setOutputFiles(prev => [...prev, ...valid]);
     }
   }, [toast]);
 
@@ -57,7 +65,7 @@ export function UploadDados({ onUploadSuccess }: UploadDadosProps) {
       'application/vnd.ms-excel': ['.xls'],
       'text/csv': ['.csv']
     },
-    multiple: false
+    multiple: true
   });
 
   const outputDropzone = useDropzone({
@@ -67,14 +75,14 @@ export function UploadDados({ onUploadSuccess }: UploadDadosProps) {
       'application/vnd.ms-excel': ['.xls'],
       'text/csv': ['.csv']
     },
-    multiple: false
+    multiple: true
   });
 
   const handleAnalyze = async () => {
-    if (!inputFile) {
+    if (inputFiles.length === 0 && outputFiles.length === 0) {
       toast({
         title: "Erro",
-        description: "Por favor, selecione o arquivo de entrada antes de prosseguir.",
+        description: "Por favor, selecione ao menos um arquivo (entrada ou saída).",
         variant: "destructive",
       });
       return;
@@ -83,14 +91,19 @@ export function UploadDados({ onUploadSuccess }: UploadDadosProps) {
     setUploading(true);
     
     try {
-      await apiService.uploadExcelBundle(inputFile);
+      // Prioridade: se houver arquivos de entrada, eles já podem conter saídas.
+      // Envie todos os selecionados; o backend aceita múltiplos via campo 'files'.
+      const filesToSend: File[] = [...inputFiles, ...outputFiles];
+      await apiService.uploadExcelBundleMulti(filesToSend);
       
       toast({
         title: "Sucesso!",
         description: "Arquivos enviados e processados com sucesso.",
       });
       
+      console.log('Disparando evento data-updated...');
       window.dispatchEvent(new Event('data-updated'));
+      console.log('Evento data-updated disparado!');
       onUploadSuccess?.();
     } catch (error) {
       console.error('Erro no upload:', error);
@@ -137,11 +150,28 @@ export function UploadDados({ onUploadSuccess }: UploadDadosProps) {
                   <Upload className="h-8 w-8 text-primary" />
                 </div>
                 
-                {inputFile ? (
-                  <div className="flex items-center gap-3 text-primary">
-                    <FileText className="h-5 w-5" />
-                    <span className="font-medium">{inputFile.name}</span>
-                    <Check className="h-5 w-5" />
+                {inputFiles.length > 0 ? (
+                  <div className="flex flex-col items-center gap-2 w-full">
+                    <div className="flex items-center gap-3 text-primary">
+                      <FileText className="h-5 w-5" />
+                      <span className="font-medium">{inputFiles.length} arquivo(s) selecionado(s)</span>
+                      <Check className="h-5 w-5" />
+                    </div>
+                    <div className="flex flex-wrap gap-2 justify-center w-full">
+                      {inputFiles.map((f, idx) => (
+                        <div key={idx} className="flex items-center gap-2 bg-muted/60 rounded-full px-3 py-1">
+                          <span className="text-sm text-foreground/80 max-w-[220px] truncate">{f.name}</span>
+                          <button
+                            type="button"
+                            aria-label={`Remover ${f.name}`}
+                            onClick={(e) => { e.stopPropagation(); removeInputFile(idx); }}
+                            className="inline-flex items-center justify-center rounded-full hover:bg-muted p-1"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 ) : (
                   <div>
@@ -188,11 +218,28 @@ export function UploadDados({ onUploadSuccess }: UploadDadosProps) {
                   <Upload className="h-8 w-8 text-muted-foreground" />
                 </div>
                 
-                {outputFile ? (
-                  <div className="flex items-center gap-3 text-primary">
-                    <FileText className="h-5 w-5" />
-                    <span className="font-medium">{outputFile.name}</span>
-                    <Check className="h-5 w-5" />
+                {outputFiles.length > 0 ? (
+                  <div className="flex flex-col items-center gap-2 w-full">
+                    <div className="flex items-center gap-3 text-primary">
+                      <FileText className="h-5 w-5" />
+                      <span className="font-medium">{outputFiles.length} arquivo(s) selecionado(s)</span>
+                      <Check className="h-5 w-5" />
+                    </div>
+                    <div className="flex flex-wrap gap-2 justify-center w-full">
+                      {outputFiles.map((f, idx) => (
+                        <div key={idx} className="flex items-center gap-2 bg-muted/60 rounded-full px-3 py-1">
+                          <span className="text-sm text-foreground/80 max-w-[220px] truncate">{f.name}</span>
+                          <button
+                            type="button"
+                            aria-label={`Remover ${f.name}`}
+                            onClick={(e) => { e.stopPropagation(); removeOutputFile(idx); }}
+                            className="inline-flex items-center justify-center rounded-full hover:bg-muted p-1"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 ) : (
                   <div>
@@ -211,7 +258,7 @@ export function UploadDados({ onUploadSuccess }: UploadDadosProps) {
       </div>
 
       {/* Action Button */}
-      {inputFile && (
+      {(inputFiles.length > 0 || outputFiles.length > 0) && (
         <div className="flex justify-center">
           <Button
             onClick={handleAnalyze}
