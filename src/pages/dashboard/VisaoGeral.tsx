@@ -90,21 +90,34 @@ export function VisaoGeral() {
       console.log('Dados do período recebidos:', periodData);
 
       if (periodData && periodData.length > 0) {
-        // Calcular KPIs do período
-        const totalEntradas = periodData.reduce((sum, item) => sum + (item.entrada || 0), 0);
-        const totalSaidas = periodData.reduce((sum, item) => sum + (item.saida || 0), 0);
+        // Debug: verificar estrutura dos dados
+        console.log('Primeiros 5 registros do período:', periodData.slice(0, 5));
+        console.log('Campos disponíveis no primeiro registro:', Object.keys(periodData[0] || {}));
         
-      console.log('Dados do período processados:', {
-        totalEntradas,
-        totalSaidas,
-        fluxoLiquido: totalEntradas - totalSaidas,
-        dados: periodData
-      });
-      
-      // Debug específico para saídas
-      const saidas = periodData.filter(item => item.saida > 0);
-      console.log('Transações com saída encontradas:', saidas);
-      console.log('Total de saídas calculado:', totalSaidas);
+        // Calcular KPIs do período
+        const totalEntradas = periodData.reduce((sum, item) => {
+          const valor = Number(item.entrada) || 0;
+          return sum + valor;
+        }, 0);
+        
+        const totalSaidas = periodData.reduce((sum, item) => {
+          const valor = Number(item.saida) || 0;
+          return sum + valor;
+        }, 0);
+        
+        console.log('Dados do período processados:', {
+          totalEntradas,
+          totalSaidas,
+          fluxoLiquido: totalEntradas - totalSaidas,
+          totalRegistros: periodData.length
+        });
+        
+        // Debug específico para saídas
+        const saidasMaioresQueZero = periodData.filter(item => (Number(item.saida) || 0) > 0);
+        console.log('Transações com saída > 0:', saidasMaioresQueZero.length);
+        if (saidasMaioresQueZero.length > 0) {
+          console.log('Exemplo de transação com saída:', saidasMaioresQueZero[0]);
+        }
         
         setPeriodStats({
           totalEntradas,
