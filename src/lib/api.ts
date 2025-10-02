@@ -61,6 +61,8 @@ export interface StatisticsData {
   ultimo_saldo: number;
   total_entradas: number;
   total_saidas: number;
+  media_saida?: number;  // Valor médio de saídas
+  media_entrada?: number; // Valor médio de entradas
   data_atualizacao?: string;
 }
 
