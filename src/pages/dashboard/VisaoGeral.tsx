@@ -75,13 +75,20 @@ export function VisaoGeral() {
 
       // 1. Buscar estatísticas globais (valores totais reais - sem paginação)
       const stats = await apiService.getStatistics();
-      console.log('Estatísticas recebidas:', stats);
-      setGlobalStats({
+      console.log('🔍 [DEBUG] Estatísticas COMPLETAS recebidas da API:', stats);
+      console.log('🔍 [DEBUG] Valor de total_saidas:', stats.total_saidas);
+      console.log('🔍 [DEBUG] Tipo de total_saidas:', typeof stats.total_saidas);
+      console.log('🔍 [DEBUG] Valor de total_entradas:', stats.total_entradas);
+      
+      const globalStatsCalculated = {
         saldoAtual: stats.ultimo_saldo ?? 0,
         totalEntradas: stats.total_entradas ?? 0,
         totalSaidas: stats.total_saidas ?? 0,
         dataAtualizacao: stats.data_atualizacao || new Date().toISOString()
-      });
+      };
+      
+      console.log('🔍 [DEBUG] globalStats após processamento:', globalStatsCalculated);
+      setGlobalStats(globalStatsCalculated);
 
       // 2. Buscar dados do período (para gráficos e KPIs do período)
       console.log('Buscando dados do período:', { from: dateRange.from, to: dateRange.to });
