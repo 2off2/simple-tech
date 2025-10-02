@@ -189,6 +189,9 @@ class ApiService {
   async getStatistics(): Promise<StatisticsData> {
     try {
       const { data } = await http.get<StatisticsData>(`/data/statistics`);
+      console.log('🔍 [API.TS] Response completa de /data/statistics:', data);
+      console.log('🔍 [API.TS] Todos os campos disponíveis:', Object.keys(data));
+      console.log('🔍 [API.TS] Valores de cada campo:', JSON.stringify(data, null, 2));
       return data;
     } catch (error) {
       this.extractErrorMessage(error);
