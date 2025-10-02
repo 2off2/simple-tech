@@ -26,6 +26,8 @@ interface MonthlyData {
 export function VisaoGeral() {
   const [globalStats, setGlobalStats] = useState({
     saldoAtual: 0,
+    totalEntradas: 0,
+    totalSaidas: 0,
     dataAtualizacao: ""
   });
   
@@ -71,11 +73,13 @@ export function VisaoGeral() {
       setLoading(true);
       console.log('Iniciando fetchAllData...');
 
-      // 1. Buscar estatísticas globais (saldo atual - sem paginação)
+      // 1. Buscar estatísticas globais (valores totais reais - sem paginação)
       const stats = await apiService.getStatistics();
       console.log('Estatísticas recebidas:', stats);
       setGlobalStats({
         saldoAtual: stats.ultimo_saldo ?? 0,
+        totalEntradas: stats.total_entradas ?? 0,
+        totalSaidas: stats.total_saidas ?? 0,
         dataAtualizacao: stats.data_atualizacao || new Date().toISOString()
       });
 
@@ -266,15 +270,15 @@ export function VisaoGeral() {
   const metrics = [
     {
       title: "Total de Entradas",
-      subtitle: "(Período selecionado)",
-      value: periodStats.totalEntradas,
+      subtitle: "(Global - Todos os dados)",
+      value: globalStats.totalEntradas,
       icon: TrendingUp,
       trend: "positive"
     },
     {
       title: "Total de Saídas",
-      subtitle: "(Período selecionado)",
-      value: periodStats.totalSaidas,
+      subtitle: "(Global - Todos os dados)",
+      value: globalStats.totalSaidas,
       icon: TrendingDown,
       trend: "negative"
     },
