@@ -164,12 +164,14 @@ class ApiService {
   }
 
   // Upload de múltiplos arquivos (entradas e/ou saídas)
-  async uploadExcelBundleMulti(files: File[]): Promise<{ message: string }> {
+  async uploadExcelBundleMulti(files: File[], hasOutflow: boolean = false): Promise<{ message: string }> {
     const formData = new FormData();
     // O backend aceita tanto 'files' (lista) quanto 'file' único.
     for (const f of files) {
       formData.append('files', f);
     }
+    // Sinalizar para o backend que existem planilhas do card de saída
+    formData.append('has_outflow', String(Boolean(hasOutflow)));
     if (files.length === 0) {
       throw new Error('Nenhum arquivo selecionado.');
     }
@@ -208,6 +210,16 @@ class ApiService {
     try {
       const { data } = await http.get<ProcessedData[]>(`/data/view_processed`, { params });
       return data;
+    } catch (error) {
+      this.extractErrorMessage(error);
+    }
+  }
+
+  // Resumo mensal direto do backend
+  async getMonthlySummary(): Promise<Array<{ ano_mes: string; entrada: number; saida: number; qtd_entradas_pos: number; qtd_saidas_pos: number }>> {
+    try {
+      const { data } = await http.get(`/data/monthly_summary`);
+      return data as any;
     } catch (error) {
       this.extractErrorMessage(error);
     }

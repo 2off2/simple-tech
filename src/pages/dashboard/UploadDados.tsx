@@ -94,7 +94,8 @@ export function UploadDados({ onUploadSuccess }: UploadDadosProps) {
       // Prioridade: se houver arquivos de entrada, eles já podem conter saídas.
       // Envie todos os selecionados; o backend aceita múltiplos via campo 'files'.
       const filesToSend: File[] = [...inputFiles, ...outputFiles];
-      await apiService.uploadExcelBundleMulti(filesToSend);
+      const hasOutflow = outputFiles.length > 0;
+      await apiService.uploadExcelBundleMulti(filesToSend, hasOutflow);
       
       toast({
         title: "Sucesso!",
@@ -109,7 +110,7 @@ export function UploadDados({ onUploadSuccess }: UploadDadosProps) {
       console.error('Erro no upload:', error);
       toast({
         title: "Erro",
-        description: "Erro ao processar os arquivos. Verifique se contém as abas 'FluxoDeCaixa' e 'DadosContabeis'.",
+        description: "Erro ao processar os arquivos. Verifique se os arquivos estão no formato correto.",
         variant: "destructive",
       });
     } finally {
@@ -133,7 +134,7 @@ export function UploadDados({ onUploadSuccess }: UploadDadosProps) {
           <CardHeader>
             <CardTitle className="text-lg">Planilhas de Entrada (Obrigatório)</CardTitle>
             <p className="text-sm text-muted-foreground">
-              O arquivo deve conter duas abas: <strong>FluxoDeCaixa</strong> e <strong>DadosContabeis</strong>
+              Arquivos de entrada com dados financeiros (entradas e saídas)
             </p>
           </CardHeader>
           <CardContent>
@@ -189,8 +190,9 @@ export function UploadDados({ onUploadSuccess }: UploadDadosProps) {
             <div className="mt-4 p-4 bg-muted/50 rounded-lg">
               <h4 className="font-medium text-foreground mb-2">Estrutura do arquivo de entrada:</h4>
               <ul className="text-sm text-muted-foreground space-y-1">
-                <li>• <strong>Aba "FluxoDeCaixa":</strong> Dados do regime de caixa (entradas e saídas efetivas)</li>
-                <li>• <strong>Aba "DadosContabeis":</strong> Dados do regime de competência (faturamento e custos)</li>
+                <li>• <strong>Coluna "Data":</strong> Data da transação</li>
+                <li>• <strong>Coluna "Descrição":</strong> Descrição da transação</li>
+                <li>• <strong>Coluna "Entrada" ou "Saída":</strong> Valores monetários</li>
               </ul>
             </div>
           </CardContent>

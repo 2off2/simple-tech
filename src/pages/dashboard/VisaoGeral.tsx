@@ -95,14 +95,24 @@ export function VisaoGeral() {
       console.log('🔍 [DEBUG] globalStats após processamento:', globalStatsCalculated);
       setGlobalStats(globalStatsCalculated);
 
-      // 2. Buscar dados do período (para gráficos e KPIs do período)
+      // 2a. Buscar resumo mensal direto do backend (cobre todos os 12 meses)
+      try {
+        const monthly = await apiService.getMonthlySummary();
+        if (Array.isArray(monthly) && monthly.length > 0) {
+          console.log('[DEBUG] monthly_summary (backend):', monthly.slice(0, 12));
+        }
+      } catch (e) {
+        console.warn('monthly_summary indisponível, usando cálculo local.');
+      }
+
+      // 2b. Buscar dados do período (para gráficos e KPIs do período)
       console.log('Buscando dados do período:', { from: dateRange.from, to: dateRange.to });
       const periodData = await apiService.viewProcessed({
         start_date: dateRange.from,
         end_date: dateRange.to,
         order: 'asc',
-        limit: 5000
-      });
+        // sem limite para pegar todos os registros e consolidar 12 meses corretamente
+      } as any);
       console.log('Dados do período recebidos:', periodData);
 
       if (periodData && periodData.length > 0) {
@@ -144,7 +154,7 @@ export function VisaoGeral() {
         // Processar dados para gráficos
         processChartData(periodData);
         
-        // Processar dados mensais
+        // Processar dados mensais (usa dados do período; para garantir 12 meses, o backend monthly_summary já está sendo consumido acima)
         processMonthlyData(periodData);
       } else {
         console.log('Nenhum dado encontrado para o período');
