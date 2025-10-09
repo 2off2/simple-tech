@@ -76,23 +76,16 @@ export function VisaoGeral() {
       // 1. Buscar estatísticas globais (valores totais reais - sem paginação)
       const stats = await apiService.getStatistics();
       console.log('🔍 [DEBUG] Estatísticas COMPLETAS recebidas da API:', stats);
-      console.log('🔍 [DEBUG] Valor de total_saidas:', stats.total_saidas);
-      console.log('🔍 [DEBUG] Valor de media_saida:', stats.media_saida);
-      console.log('🔍 [DEBUG] Valor de total_entradas:', stats.total_entradas);
-      
-      // Usar media_saida se total_saidas for 0, pois a API pode retornar média ao invés de total
-      const totalSaidasCalculado = stats.total_saidas && stats.total_saidas > 0 
-        ? stats.total_saidas 
-        : (stats.media_saida ?? 0);
+      console.log('🔍 [DEBUG] Todos os campos:', Object.keys(stats));
       
       const globalStatsCalculated = {
         saldoAtual: stats.ultimo_saldo ?? 0,
         totalEntradas: stats.total_entradas ?? 0,
-        totalSaidas: totalSaidasCalculado,
+        totalSaidas: stats.total_saidas ?? 0,
         dataAtualizacao: stats.data_atualizacao || new Date().toISOString()
       };
       
-      console.log('🔍 [DEBUG] globalStats após processamento:', globalStatsCalculated);
+      console.log('🔍 [DEBUG] globalStats calculado:', globalStatsCalculated);
       setGlobalStats(globalStatsCalculated);
 
       // 2a. Buscar resumo mensal direto do backend (cobre todos os 12 meses)
