@@ -100,6 +100,48 @@ export function VisaoGeral() {
         const monthly = await apiService.getMonthlySummary();
         if (Array.isArray(monthly) && monthly.length > 0) {
           console.log('[DEBUG] monthly_summary (backend):', monthly.slice(0, 12));
+          // Converter o resumo do backend em estrutura MonthlyData com preenchimento de meses e saldo cumulativo por ano
+          const mapAnoParaMeses: Record<number, Record<number, { entrada: number; saida: number }>> = {};
+          const anosSet = new Set<number>();
+          for (const row of monthly as any[]) {
+            const [anoStr, mesStr] = String(row.ano_mes || '').split('-');
+            const ano = Number(anoStr);
+            const mes = Number(mesStr);
+            if (!ano || !mes) continue;
+            if (!mapAnoParaMeses[ano]) mapAnoParaMeses[ano] = {} as any;
+            mapAnoParaMeses[ano][mes] = {
+              entrada: Number(row.entrada) || 0,
+              saida: Number(row.saida) || 0,
+            };
+            anosSet.add(ano);
+          }
+
+          const anosOrdenados = Array.from(anosSet).sort((a, b) => a - b);
+          const monthlyBuilt: MonthlyData[] = [];
+          for (const ano of anosOrdenados) {
+            let saldoCumulativoAno = 0;
+            for (let mes = 1; mes <= 12; mes++) {
+              const valores = (mapAnoParaMeses[ano] && mapAnoParaMeses[ano][mes]) || { entrada: 0, saida: 0 };
+              const totalEntradas = valores.entrada;
+              const totalSaidas = valores.saida;
+              const fluxoLiquido = totalEntradas - totalSaidas;
+              saldoCumulativoAno += fluxoLiquido;
+              const mesAno = `${ano}-${mes.toString().padStart(2, '0')}`;
+              monthlyBuilt.push({
+                ano,
+                mes,
+                mes_ano: mesAno,
+                total_entradas: totalEntradas,
+                total_saidas: totalSaidas,
+                fluxo_liquido: fluxoLiquido,
+                saldo_final_mes: saldoCumulativoAno,
+                qtd_transacoes: (monthly as any[]).find((r) => String(r.ano_mes) === mesAno)?.qtd_entradas_pos + (monthly as any[]).find((r) => String(r.ano_mes) === mesAno)?.qtd_saidas_pos || 0,
+                ticket_medio: 0,
+              });
+            }
+          }
+          setMonthlyData(monthlyBuilt);
+          setAvailableYears(anosOrdenados);
         }
       } catch (e) {
         console.warn('monthly_summary indisponível, usando cálculo local.');
@@ -154,8 +196,10 @@ export function VisaoGeral() {
         // Processar dados para gráficos
         processChartData(periodData);
         
-        // Processar dados mensais (usa dados do período; para garantir 12 meses, o backend monthly_summary já está sendo consumido acima)
-        processMonthlyData(periodData);
+        // Se o backend não tiver preenchido monthlyData (fallback), calcular localmente
+        if (!monthlyData || monthlyData.length === 0) {
+          processMonthlyData(periodData);
+        }
       } else {
         console.log('Nenhum dado encontrado para o período');
         setPeriodStats({ totalEntradas: 0, totalSaidas: 0, fluxoLiquido: 0 });
