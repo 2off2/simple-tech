@@ -1,51 +1,27 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Network, Brain, FileSpreadsheet, LayoutDashboard } from "lucide-react";
+
 const Technology = () => {
   const techStack = [{
-    category: "Backend & IA",
-    technologies: [{
-      name: "Python",
-      description: "Linguagem principal para algoritmos de IA"
-    }, {
-      name: "Scikit-learn",
-      description: "Machine learning e análise preditiva"
-    }, {
-      name: "Pandas",
-      description: "Manipulação e análise de dados"
-    }, {
-      name: "NumPy",
-      description: "Computação científica e matemática"
-    }]
+    category: "Backend & Modelagem",
+    icon: Network,
+    title: "Simulações Monte Carlo",
+    description: "Cálculos estatísticos que projetam resultados financeiros sob diferentes cenários."
   }, {
-    category: "Frontend & Interface",
-    technologies: [{
-      name: "React",
-      description: "Interface de usuário moderna e responsiva"
-    }, {
-      name: "TypeScript",
-      description: "Desenvolvimento tipado e seguro"
-    }, {
-      name: "Tailwind CSS",
-      description: "Design system consistente e elegante"
-    }, {
-      name: "Vite",
-      description: "Build rápido e desenvolvimento otimizado"
-    }]
+    category: "Dados & IA",
+    icon: Brain,
+    title: "Modelos Preditivos",
+    description: "Algoritmos de aprendizado de máquina ajustados para prever receitas, custos e fluxo de caixa."
   }, {
-    category: "Análise & Visualização",
-    technologies: [{
-      name: "Matplotlib",
-      description: "Visualização de dados e gráficos"
-    }, {
-      name: "Seaborn",
-      description: "Gráficos estatísticos avançados"
-    }, {
-      name: "Plotly",
-      description: "Visualizações interativas"
-    }, {
-      name: "Jupyter",
-      description: "Desenvolvimento e prototipagem"
-    }]
+    category: "Conectividade",
+    icon: FileSpreadsheet,
+    title: "Integração Excel/CSV",
+    description: "Importação simples e segura dos dados contábeis e financeiros."
+  }, {
+    category: "Visualização",
+    icon: LayoutDashboard,
+    title: "Painéis Interativos",
+    description: "Dashboards modernos com gráficos dinâmicos e responsivos."
   }];
   return <section id="tecnologia" className="py-24 bg-gradient-subtle">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -62,26 +38,30 @@ const Technology = () => {
           </p>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
-          {techStack.map((category, categoryIndex) => <Card key={categoryIndex} className="bg-card/50 backdrop-blur-sm border-border hover:shadow-simple transition-all duration-300 hover:-translate-y-1">
-              <CardHeader className="text-center pb-4">
-                <CardTitle className="text-xl font-bold text-foreground">
-                  {category.category}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {category.technologies.map((tech, techIndex) => <div key={techIndex} className="group p-4 rounded-lg bg-background/50 border border-border/50 hover:border-primary/30 transition-all duration-200">
-                    <div className="flex items-center justify-between mb-2">
-                      <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20 group-hover:bg-primary/20 transition-colors">
-                        {tech.name}
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground leading-relaxed">
-                      {tech.description}
-                    </p>
-                  </div>)}
-              </CardContent>
-            </Card>)}
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto">
+          {techStack.map((tech, index) => {
+            const IconComponent = tech.icon;
+            return (
+              <Card key={index} className="group hover:shadow-simple transition-all duration-300 hover:-translate-y-2 border-border bg-card/50 backdrop-blur-sm">
+                <CardHeader className="text-center pb-4">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4 mx-auto group-hover:bg-primary/20 transition-colors">
+                    <IconComponent className="h-8 w-8 text-primary group-hover:scale-110 transition-transform" />
+                  </div>
+                  <p className="text-sm font-medium text-muted-foreground mb-2">
+                    {tech.category}
+                  </p>
+                  <CardTitle className="text-xl font-bold text-foreground group-hover:text-primary transition-colors">
+                    {tech.title}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground text-center leading-relaxed">
+                    {tech.description}
+                  </p>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
 
         {/* Additional Info */}
