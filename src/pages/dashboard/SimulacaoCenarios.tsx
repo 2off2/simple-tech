@@ -51,6 +51,8 @@ export function SimulacaoCenarios() {
   const [loading, setLoading] = useState(false);
   const [apiStatus, setApiStatus] = useState<'checking' | 'online' | 'offline'>('checking');
   const [useAiCorrelation, setUseAiCorrelation] = useState<boolean>(false);
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reportMarkdown, setReportMarkdown] = useState<string | null>(null);
   const { toast } = useToast();
 
   const months = [
@@ -455,6 +457,27 @@ export function SimulacaoCenarios() {
     return "Risco Mínimo";
   };
 
+  const gerarRelatorio = async () => {
+    try {
+      setReportLoading(true);
+      const context: any = {
+        activeTab,
+        scenario,
+        seasonalityRules,
+        loan: { loanAmount, interestRate, loanTerm, estimatedInstallment },
+        resultados,
+      };
+      const res = await apiService.generateReport({ page: "SimulacaoCenarios", context, simulation_type: activeTab });
+      setReportMarkdown(res.report_markdown);
+      toast({ title: "Relatório gerado" });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Erro desconhecido';
+      toast({ title: 'Erro ao gerar relatório', description: msg, variant: 'destructive' });
+    } finally {
+      setReportLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -465,7 +488,7 @@ export function SimulacaoCenarios() {
               Teste diferentes cenários usando simulação de Monte Carlo e entenda o impacto no seu fluxo de caixa
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <div className={`w-3 h-3 rounded-full ${
               apiStatus === 'online' ? 'bg-green-500' : 
               apiStatus === 'offline' ? 'bg-red-500' : 'bg-yellow-500'
@@ -473,6 +496,9 @@ export function SimulacaoCenarios() {
             <span className="text-sm text-muted-foreground">
               API {apiStatus === 'online' ? 'Online' : apiStatus === 'offline' ? 'Offline' : 'Verificando...'}
             </span>
+            <Button size="sm" variant="outline" onClick={gerarRelatorio} disabled={reportLoading}>
+              {reportLoading ? 'Gerando...' : 'Gerar Relatório'}
+            </Button>
           </div>
         </div>
       </div>
@@ -1229,6 +1255,17 @@ export function SimulacaoCenarios() {
             </AlertDescription>
           </Alert>
         </div>
+      )}
+
+      {reportMarkdown && (
+        <Card className="shadow-card">
+          <CardHeader>
+            <CardTitle>Relatório Executivo</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <pre className="whitespace-pre-wrap text-sm text-foreground">{reportMarkdown}</pre>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

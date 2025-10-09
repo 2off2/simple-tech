@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { predictCashflow, PredictionData } from "@/lib/api";
+import { predictCashflow, PredictionData, apiService } from "@/lib/api";
 import { toast } from "sonner";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart } from 'recharts';
 
@@ -142,6 +142,8 @@ export function PrevisaoFluxo() {
   const [predictionData, setPredictionData] = useState<PredictionData[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [days, setDays] = useState(30);
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reportMarkdown, setReportMarkdown] = useState<string | null>(null);
 
   const handlePredict = async () => {
     setIsLoading(true);
@@ -165,11 +167,33 @@ export function PrevisaoFluxo() {
     }
   };
 
+  const gerarRelatorio = async () => {
+    try {
+      setReportLoading(true);
+      const context = {
+        days,
+        sample: predictionData ? predictionData.slice(0, 5) : [],
+      };
+      const res = await apiService.generateReport({ page: "PrevisaoFluxo", context });
+      setReportMarkdown(res.report_markdown);
+    } catch (e) {
+      // no toast lib here, keep minimal
+      console.error(e);
+    } finally {
+      setReportLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-8">
       <Card>
         <CardHeader>
-          <CardTitle>Gerar Previsão de Fluxo de Caixa</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Gerar Previsão de Fluxo de Caixa</CardTitle>
+            <Button size="sm" variant="outline" onClick={gerarRelatorio} disabled={reportLoading}>
+              {reportLoading ? 'Gerando...' : 'Gerar Relatório'}
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <p className="mb-4">Configure quantos dias deseja prever e clique no botão para treinar o modelo de IA.</p>
@@ -197,6 +221,17 @@ export function PrevisaoFluxo() {
       
       {/* A renderização agora é feita por um componente dedicado */}
       {predictionData && <PredictionResults data={predictionData} />}
+
+      {reportMarkdown && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Relatório Executivo</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <pre className="whitespace-pre-wrap text-sm text-foreground">{reportMarkdown}</pre>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

@@ -14,6 +14,8 @@ export function UploadDados({ onUploadSuccess }: UploadDadosProps) {
   const [inputFiles, setInputFiles] = useState<File[]>([]);
   const [outputFiles, setOutputFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reportMarkdown, setReportMarkdown] = useState<string | null>(null);
   const { toast } = useToast();
 
   const removeInputFile = useCallback((index: number) => {
@@ -118,14 +120,36 @@ export function UploadDados({ onUploadSuccess }: UploadDadosProps) {
     }
   };
 
+  const gerarRelatorio = async () => {
+    try {
+      setReportLoading(true);
+      const context = {
+        inputFiles: inputFiles.map(f => f.name),
+        outputFiles: outputFiles.map(f => f.name),
+        totalArquivos: inputFiles.length + outputFiles.length,
+      };
+      const res = await apiService.generateReport({ page: "UploadDados", context });
+      setReportMarkdown(res.report_markdown);
+      toast({ title: "Relatório gerado" });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Erro desconhecido";
+      toast({ title: "Erro ao gerar relatório", description: msg, variant: "destructive" });
+    } finally {
+      setReportLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <div>
+      <div className="flex items-start justify-between">
         <h1 className="text-3xl font-bold text-foreground">Importe seus dados financeiros</h1>
-        <p className="text-muted-foreground mt-2">
-          Envie seu arquivo Excel para começar a análise financeira completa
-        </p>
+        <Button size="sm" variant="outline" onClick={gerarRelatorio} disabled={reportLoading}>
+          {reportLoading ? 'Gerando...' : 'Gerar Relatório'}
+        </Button>
       </div>
+      <p className="text-muted-foreground mt-2">
+        Envie seu arquivo Excel para começar a análise financeira completa
+      </p>
 
       {/* Upload Areas */}
       <div className="max-w-4xl mx-auto space-y-6">
@@ -270,6 +294,20 @@ export function UploadDados({ onUploadSuccess }: UploadDadosProps) {
           >
             {uploading ? 'Processando...' : 'Analisar Dados'}
           </Button>
+        </div>
+      )}
+
+      {/* Relatório */}
+      {reportMarkdown && (
+        <div className="max-w-4xl mx-auto">
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle className="text-foreground">Relatório Executivo</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <pre className="whitespace-pre-wrap text-sm text-foreground">{reportMarkdown}</pre>
+            </CardContent>
+          </Card>
         </div>
       )}
     </div>

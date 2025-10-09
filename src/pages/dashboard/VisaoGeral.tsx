@@ -51,6 +51,8 @@ export function VisaoGeral() {
   const [availableYears, setAvailableYears] = useState<number[]>([]);
   const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [reportMarkdown, setReportMarkdown] = useState<string | null>(null);
+  const [reportLoading, setReportLoading] = useState<boolean>(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -295,6 +297,25 @@ export function VisaoGeral() {
     setAvailableYears(Array.from(yearsSet).sort());
   };
 
+  const gerarRelatorio = async () => {
+    try {
+      setReportLoading(true);
+      const context = {
+        globalStats,
+        periodStats,
+        firstMonths: monthlyData.slice(0, 12),
+      };
+      const res = await apiService.generateReport({ page: "VisaoGeral", context });
+      setReportMarkdown(res.report_markdown);
+      toast({ title: "Relatório gerado" });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Erro desconhecido";
+      toast({ title: "Erro ao gerar relatório", description: msg, variant: "destructive" });
+    } finally {
+      setReportLoading(false);
+    }
+  };
+
   const filteredMonthlyData = selectedYear === "all" 
     ? monthlyData 
     : monthlyData.filter(m => m.ano === parseInt(selectedYear));
@@ -351,12 +372,15 @@ export function VisaoGeral() {
           </p>
         </div>
 
-        {/* Filtros de período - Placeholder por enquanto */}
-        <div className="flex gap-2 items-center">
+        {/* Filtros de período e ações */}
+        <div className="flex gap-3 items-center">
           <Calendar className="h-4 w-4 text-muted-foreground" />
           <span className="text-sm text-muted-foreground">
             Período: {dateRange.from} a {dateRange.to}
           </span>
+          <Button size="sm" onClick={gerarRelatorio} disabled={reportLoading}>
+            {reportLoading ? "Gerando..." : "Gerar Relatório"}
+          </Button>
         </div>
       </div>
 
@@ -605,6 +629,19 @@ export function VisaoGeral() {
           )}
         </CardContent>
       </Card>
+
+      {/* Relatório (Markdown simples) */}
+      {reportMarkdown && (
+        <Card className="shadow-card">
+          <CardHeader>
+            <CardTitle className="text-foreground">Relatório Executivo</CardTitle>
+            <CardDescription>Gerado pela API de Relatórios</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <pre className="whitespace-pre-wrap text-sm text-foreground">{reportMarkdown}</pre>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

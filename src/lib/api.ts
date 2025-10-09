@@ -345,6 +345,18 @@ class ApiService {
       this.extractErrorMessage(error);
     }
   }
+
+  // Gerar relatório (Gemini backend)
+  async generateReport(payload: { page: string; context?: Record<string, any>; simulation_type?: string }): Promise<{ page: string; model: string; used_ai: boolean; report_markdown: string }> {
+    try {
+      const { data } = await http.post(`/reports/generate`, payload, {
+        headers: { 'Content-Type': 'application/json' },
+      });
+      return data as any;
+    } catch (error) {
+      this.extractErrorMessage(error);
+    }
+  }
 }
 
 export const apiService = new ApiService();
