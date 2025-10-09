@@ -247,32 +247,42 @@ export function VisaoGeral() {
     // Calcular KPIs mensais
     const monthly: MonthlyData[] = [];
     
-    monthlyMap.forEach((items, mesAno) => {
-      const [ano, mes] = mesAno.split('-').map(Number);
-      
-      const totalEntradas = items.reduce((sum, item) => sum + (item.entrada || 0), 0);
-      const totalSaidas = items.reduce((sum, item) => sum + (item.saida || 0), 0);
-      const fluxoLiquido = totalEntradas - totalSaidas;
-      
-      // Saldo final do mês = último saldo do mês
-      const sortedItems = [...items].sort((a, b) => a.data.localeCompare(b.data));
-      const saldoFinalMes = sortedItems[sortedItems.length - 1]?.saldo || 0;
-      
-      const qtdTransacoes = items.length;
-      const entradasCount = items.filter(item => (item.entrada || 0) > 0).length;
-      const ticketMedio = entradasCount > 0 ? totalEntradas / entradasCount : 0;
+    // Para cada ano encontrado, garantir que todos os 12 meses existam
+    const anos = Array.from(yearsSet);
+    
+    anos.forEach(ano => {
+      // Criar entrada para todos os 12 meses
+      for (let mes = 1; mes <= 12; mes++) {
+        const mesAno = `${ano}-${mes.toString().padStart(2, '0')}`;
+        const items = monthlyMap.get(mesAno) || [];
+        
+        const totalEntradas = items.reduce((sum, item) => sum + (item.entrada || 0), 0);
+        const totalSaidas = items.reduce((sum, item) => sum + (item.saida || 0), 0);
+        const fluxoLiquido = totalEntradas - totalSaidas;
+        
+        // Saldo final do mês = último saldo do mês (ou 0 se não houver dados)
+        let saldoFinalMes = 0;
+        if (items.length > 0) {
+          const sortedItems = [...items].sort((a, b) => a.data.localeCompare(b.data));
+          saldoFinalMes = sortedItems[sortedItems.length - 1]?.saldo || 0;
+        }
+        
+        const qtdTransacoes = items.length;
+        const entradasCount = items.filter(item => (item.entrada || 0) > 0).length;
+        const ticketMedio = entradasCount > 0 ? totalEntradas / entradasCount : 0;
 
-      monthly.push({
-        ano,
-        mes,
-        mes_ano: mesAno,
-        total_entradas: totalEntradas,
-        total_saidas: totalSaidas,
-        fluxo_liquido: fluxoLiquido,
-        saldo_final_mes: saldoFinalMes,
-        qtd_transacoes: qtdTransacoes,
-        ticket_medio: ticketMedio
-      });
+        monthly.push({
+          ano,
+          mes,
+          mes_ano: mesAno,
+          total_entradas: totalEntradas,
+          total_saidas: totalSaidas,
+          fluxo_liquido: fluxoLiquido,
+          saldo_final_mes: saldoFinalMes,
+          qtd_transacoes: qtdTransacoes,
+          ticket_medio: ticketMedio
+        });
+      }
     });
 
     // Ordenar por ano/mês
