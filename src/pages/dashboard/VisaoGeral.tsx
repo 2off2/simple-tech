@@ -76,16 +76,23 @@ export function VisaoGeral() {
       // 1. Buscar estatísticas globais (valores totais reais - sem paginação)
       const stats = await apiService.getStatistics();
       console.log('🔍 [DEBUG] Estatísticas COMPLETAS recebidas da API:', stats);
-      console.log('🔍 [DEBUG] Todos os campos:', Object.keys(stats));
+      console.log('🔍 [DEBUG] Valor de total_saidas:', stats.total_saidas);
+      console.log('🔍 [DEBUG] Valor de media_saida:', stats.media_saida);
+      console.log('🔍 [DEBUG] Valor de total_entradas:', stats.total_entradas);
+      
+      // Usar media_saida se total_saidas for 0, pois a API pode retornar média ao invés de total
+      const totalSaidasCalculado = stats.total_saidas && stats.total_saidas > 0 
+        ? stats.total_saidas 
+        : (stats.media_saida ?? 0);
       
       const globalStatsCalculated = {
         saldoAtual: stats.ultimo_saldo ?? 0,
         totalEntradas: stats.total_entradas ?? 0,
-        totalSaidas: stats.total_saidas ?? 0,
+        totalSaidas: totalSaidasCalculado,
         dataAtualizacao: stats.data_atualizacao || new Date().toISOString()
       };
       
-      console.log('🔍 [DEBUG] globalStats calculado:', globalStatsCalculated);
+      console.log('🔍 [DEBUG] globalStats após processamento:', globalStatsCalculated);
       setGlobalStats(globalStatsCalculated);
 
       // 2a. Buscar resumo mensal direto do backend (cobre todos os 12 meses)
@@ -237,37 +244,45 @@ export function VisaoGeral() {
     console.log('Meses encontrados:', Array.from(monthlyMap.keys()));
     console.log('Total de dados processados:', data.length);
 
-    // Calcular KPIs mensais - APENAS para meses que têm dados
+    // Calcular KPIs mensais
     const monthly: MonthlyData[] = [];
     
-    monthlyMap.forEach((items, mesAno) => {
-      const totalEntradas = items.reduce((sum, item) => sum + (item.entrada || 0), 0);
-      const totalSaidas = items.reduce((sum, item) => sum + (item.saida || 0), 0);
-      const fluxoLiquido = totalEntradas - totalSaidas;
-      
-      // Saldo final do mês = último saldo do mês
-      const sortedItems = [...items].sort((a, b) => a.data.localeCompare(b.data));
-      const saldoFinalMes = sortedItems[sortedItems.length - 1]?.saldo || 0;
-      
-      const qtdTransacoes = items.length;
-      const entradasCount = items.filter(item => (item.entrada || 0) > 0).length;
-      const ticketMedio = entradasCount > 0 ? totalEntradas / entradasCount : 0;
+    // Para cada ano encontrado, garantir que todos os 12 meses existam
+    const anos = Array.from(yearsSet);
+    
+    anos.forEach(ano => {
+      // Criar entrada para todos os 12 meses
+      for (let mes = 1; mes <= 12; mes++) {
+        const mesAno = `${ano}-${mes.toString().padStart(2, '0')}`;
+        const items = monthlyMap.get(mesAno) || [];
+        
+        const totalEntradas = items.reduce((sum, item) => sum + (item.entrada || 0), 0);
+        const totalSaidas = items.reduce((sum, item) => sum + (item.saida || 0), 0);
+        const fluxoLiquido = totalEntradas - totalSaidas;
+        
+        // Saldo final do mês = último saldo do mês (ou 0 se não houver dados)
+        let saldoFinalMes = 0;
+        if (items.length > 0) {
+          const sortedItems = [...items].sort((a, b) => a.data.localeCompare(b.data));
+          saldoFinalMes = sortedItems[sortedItems.length - 1]?.saldo || 0;
+        }
+        
+        const qtdTransacoes = items.length;
+        const entradasCount = items.filter(item => (item.entrada || 0) > 0).length;
+        const ticketMedio = entradasCount > 0 ? totalEntradas / entradasCount : 0;
 
-      // Usar ano e mês do primeiro item
-      const ano = items[0].ano;
-      const mes = items[0].mes;
-
-      monthly.push({
-        ano,
-        mes,
-        mes_ano: mesAno,
-        total_entradas: totalEntradas,
-        total_saidas: totalSaidas,
-        fluxo_liquido: fluxoLiquido,
-        saldo_final_mes: saldoFinalMes,
-        qtd_transacoes: qtdTransacoes,
-        ticket_medio: ticketMedio
-      });
+        monthly.push({
+          ano,
+          mes,
+          mes_ano: mesAno,
+          total_entradas: totalEntradas,
+          total_saidas: totalSaidas,
+          fluxo_liquido: fluxoLiquido,
+          saldo_final_mes: saldoFinalMes,
+          qtd_transacoes: qtdTransacoes,
+          ticket_medio: ticketMedio
+        });
+      }
     });
 
     // Ordenar por ano/mês
