@@ -5,38 +5,38 @@ const Features = () => {
   const features = [
     {
       icon: BarChart3,
-      title: "Análise Preditiva",
-      description: "Algoritmos avançados que antecipam riscos e tendências do mercado com alta precisão.",
+      title: "Previsão de Fluxo de Caixa",
+      description: "Antecipe resultados financeiros e planeje com base em dados reais.",
       color: "text-primary"
     },
     {
       icon: LineChart,
-      title: "Simulação Estratégica de Cenários",
-      description: "Visualize cenários futuros com análise de risco Monte Carlo para tomadas de decisão informadas.",
+      title: "Simulação de Cenários",
+      description: "Teste o impacto de diferentes cenários econômicos e financeiros com o modelo Monte Carlo.",
       color: "text-primary"
     },
     {
-      icon: Globe,
-      title: "Integração Global",
-      description: "Conecta-se com diversas fontes de dados e sistemas existentes sem complicações.",
+      icon: Coins,
+      title: "Impacto de Empréstimos",
+      description: "Simule novos financiamentos e veja como afetam o caixa e o risco do negócio.",
       color: "text-primary"
     },
     {
       icon: Users,
-      title: "Colaboração em Equipe",
-      description: "Ferramentas que facilitam o trabalho em grupo e tomada de decisões conjuntas.",
+      title: "Relatórios Inteligentes",
+      description: "Gere relatórios automáticos e exporte para Excel ou CSV.",
       color: "text-primary"
     },
     {
-      icon: FileText,
-      title: "Documentação Automática",
-      description: "Gera relatórios e documentação automaticamente baseados nas análises realizadas.",
+      icon: Globe,
+      title: "Integração com Planilhas",
+      description: "Conecte seus dados em segundos, sem configurações complexas.",
       color: "text-primary"
     },
     {
       icon: Lightbulb,
-      title: "Insights Inteligentes",
-      description: "Sugestões e recomendações baseadas em padrões identificados pela IA.",
+      title: "Insights Financeiros",
+      description: "Receba análises automáticas de riscos e oportunidades.",
       color: "text-primary"
     }
   ];

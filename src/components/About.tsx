@@ -19,49 +19,27 @@ const About = () => {
               
               <div className="space-y-6 text-lg text-muted-foreground leading-relaxed">
                 <p>
-                  O Simple.Tech é um projeto técnico integrador (PTI) desenvolvido para o curso técnico de 
-                  Inteligência Artificial. Nossa missão é democratizar o acesso a análises de risco 
-                  inteligentes através de uma interface simples e intuitiva.
+                Simple é uma ferramenta de inteligência financeira criada para ajudar pequenas 
+                e médias empresas a prever e compreender seus resultados.
                 </p>
                 
                 <p>
-                  Utilizando algoritmos avançados de machine learning, transformamos dados complexos 
-                  em insights acionáveis, permitindo que empresas e indivíduos tomem decisões mais 
-                  informadas e estratégicas.
-                </p>
-                
-                <p>
-                  O projeto combina o poder da inteligência artificial com princípios de design centrado 
-                  no usuário, criando uma experiência que é tanto poderosa quanto acessível.
+                A partir dos seus próprios dados, prevemos seu fluxo de caixa, usamos simulações 
+                de cenários com o modelo Monte Carlo para projetar qual seria o seu impacto em 
+                mudanças econômicas, variação de receitas e custos, ou novos empréstimos, tudo em 
+                uma interface simples e intuitiva.
                 </p>
               </div>
 
               <div className="flex flex-col sm:flex-row gap-4 mt-8">
-                <Button 
-                  variant="default" 
-                  className="bg-gradient-simple hover:opacity-90 text-primary-foreground font-medium shadow-simple group"
-                  asChild
-                >
-                  <a 
-                    href="https://github.com/2off2/Simple.Tech" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center"
+                  <Button 
+                    variant="outline" 
+                    className="border-2 border-border hover:bg-accent/10"
                   >
-                    <Github className="mr-2 h-4 w-4" />
-                    Ver no GitHub
-                    <ExternalLink className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                  </a>
-                </Button>
-                
-                <Button 
-                  variant="outline" 
-                  className="border-2 border-border hover:bg-accent/10"
-                >
-                  Documentação
-                </Button>
+                    Documentação
+                  </Button>
+                </div>
               </div>
-            </div>
 
             {/* Stats Side */}
             <div className="space-y-6">

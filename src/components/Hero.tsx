@@ -20,7 +20,7 @@ const Hero = () => {
 
           {/* Main Heading */}
           <h1 className="text-5xl md:text-7xl font-bold text-foreground mb-6 animate-slide-up">
-            Inteligência Artificial
+            Clareza nos dados, seja
             <span className="bg-gradient-simple bg-clip-text text-transparent ml-4">
               Simples
             </span>
@@ -28,9 +28,7 @@ const Hero = () => {
 
           {/* Subtitle */}
           <p className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-3xl mx-auto leading-relaxed animate-slide-up" style={{ animationDelay: '0.2s' }}>
-            Análise de risco inteligente e acessível. 
-            <br />
-            Transformamos dados complexos em decisões simples.
+            Preveja seu fluxo de caixa, simule cenários e fortifique seu negócio. 
           </p>
 
           {/* CTA Buttons */}
@@ -57,14 +55,14 @@ const Hero = () => {
           <div className="grid md:grid-cols-3 gap-6 max-w-3xl mx-auto animate-slide-up" style={{ animationDelay: '0.6s' }}>
             <div className="bg-card rounded-xl p-6 shadow-card border border-border hover:shadow-simple transition-all duration-300 hover:-translate-y-1">
               <Brain className="h-8 w-8 text-primary mb-4 mx-auto" />
-              <h3 className="font-semibold text-foreground mb-2">IA Avançada</h3>
-              <p className="text-sm text-muted-foreground">Algoritmos de machine learning para análise precisa</p>
+              <h3 className="font-semibold text-foreground mb-2">IA Financeira</h3>
+              <p className="text-sm text-muted-foreground">Modelos estatísticos e previsões automáticas para PMEs.</p>
             </div>
 
             <div className="bg-card rounded-xl p-6 shadow-card border border-border hover:shadow-simple transition-all duration-300 hover:-translate-y-1">
               <Shield className="h-8 w-8 text-primary mb-4 mx-auto" />
-              <h3 className="font-semibold text-foreground mb-2">Análise de Risco</h3>
-              <p className="text-sm text-muted-foreground">Identificação proativa de riscos e vulnerabilidades</p>
+              <h3 className="font-semibold text-foreground mb-2">Clareza Financeira </h3>
+              <p className="text-sm text-muted-foreground">Visualize facilmente entradas, saídas e riscos.  </p>
             </div>
 
             <div className="bg-card rounded-xl p-6 shadow-card border border-border hover:shadow-simple transition-all duration-300 hover:-translate-y-1">
