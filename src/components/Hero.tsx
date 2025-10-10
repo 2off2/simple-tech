@@ -22,7 +22,7 @@ const Hero = () => {
           <h1 className="text-5xl md:text-7xl font-bold text-foreground mb-6 animate-slide-up">
             Clareza nos dados, seja
             <span className="bg-gradient-simple bg-clip-text text-transparent ml-4">
-              Simples
+              Simple
             </span>
           </h1>
 
