@@ -9,9 +9,9 @@ const About = () => {
             {/* Content Side */}
             <div>
               <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-6">
-                Sobre o
+                Sobre a
                 <span className="bg-gradient-simple bg-clip-text text-transparent ml-3">
-                  Simple.Tech
+                  Simple
                 </span>
               </h2>
               
