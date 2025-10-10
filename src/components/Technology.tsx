@@ -3,7 +3,7 @@ import { Network, Brain, FileSpreadsheet, LayoutDashboard } from "lucide-react";
 
 const Technology = () => {
   const techStack = [{
-    category: "Backend & Modelagem",
+    category: "",
     icon: Network,
     title: "Simulações Monte Carlo",
     description: "Cálculos estatísticos que projetam resultados financeiros sob diferentes cenários."
@@ -33,7 +33,7 @@ const Technology = () => {
             </span>
           </h2>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            Stack tecnológico cuidadosamente selecionado para oferecer performance, 
+            Tecnologias cuidadosamente selecionadas para oferecer performance, 
             confiabilidade e escalabilidade
           </p>
         </div>
