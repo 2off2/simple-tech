@@ -1,5 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart3, Coins, FileText, Globe, Lightbulb, LineChart, Users } from "lucide-react";
+import { BarChart3, Coins, FileText, Table, Lightbulb, LineChart, Users } from "lucide-react";
 const Features = () => {
   const features = [{
     icon: BarChart3,
@@ -22,7 +22,7 @@ const Features = () => {
     description: "Gere relatórios automáticos e exporte para Excel ou CSV.",
     color: "text-primary"
   }, {
-    icon: Globe,
+    icon: Table,
     title: "Integração com Planilhas",
     description: "Conecte seus dados em segundos, sem configurações complexas.",
     color: "text-primary"
