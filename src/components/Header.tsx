@@ -22,7 +22,7 @@ const Header = () => {
             <img 
               src="/lovable-uploads/34a7ef60-8f49-4925-bfbb-87137457f2fe.png" 
               alt="Simple.Tech Logo" 
-              className="h-8 w-auto animate-float cursor-pointer"
+              className="h-8 w-auto cursor-pointer"
               onClick={() => scrollToSection('hero')}
             />
           </div>
