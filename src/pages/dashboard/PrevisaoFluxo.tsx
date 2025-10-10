@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { predictCashflow, PredictionData, apiService } from "@/lib/api";
 import { toast } from "sonner";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart } from 'recharts';
+import { ReportRenderer } from "@/components/ReportRenderer";
 
 // Componente para evitar renderização condicional complexa
 const PredictionResults = ({ data }: { data: PredictionData[] }) => {
@@ -223,14 +224,7 @@ export function PrevisaoFluxo() {
       {predictionData && <PredictionResults data={predictionData} />}
 
       {reportMarkdown && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Relatório Executivo</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <pre className="whitespace-pre-wrap text-sm text-foreground">{reportMarkdown}</pre>
-          </CardContent>
-        </Card>
+        <ReportRenderer markdown={reportMarkdown} />
       )}
     </div>
   );

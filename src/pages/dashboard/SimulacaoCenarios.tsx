@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Activity, TrendingUp, TrendingDown, AlertCircle, Trash2, Plus } from "lucide-react";
+import { ReportRenderer } from "@/components/ReportRenderer";
 import { useToast } from "@/hooks/use-toast";
 import { apiService, BusinessEvent, EventModifier, BusinessEventSimulationRequest, LoanSuggestionsResponse, LoanSimulationRequest } from "@/lib/api";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -1258,14 +1259,10 @@ export function SimulacaoCenarios() {
       )}
 
       {reportMarkdown && (
-        <Card className="shadow-card">
-          <CardHeader>
-            <CardTitle>Relatório Executivo</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <pre className="whitespace-pre-wrap text-sm text-foreground">{reportMarkdown}</pre>
-          </CardContent>
-        </Card>
+        <ReportRenderer 
+          markdown={reportMarkdown}
+          description="Análise de simulação de cenários"
+        />
       )}
     </div>
   );

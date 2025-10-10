@@ -10,6 +10,7 @@ import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ReportRenderer } from "@/components/ReportRenderer";
 
 interface MonthlyData {
   ano: number;
@@ -630,17 +631,9 @@ export function VisaoGeral() {
         </CardContent>
       </Card>
 
-      {/* Relatório (Markdown simples) */}
+      {/* Relatório */}
       {reportMarkdown && (
-        <Card className="shadow-card">
-          <CardHeader>
-            <CardTitle className="text-foreground">Relatório Executivo</CardTitle>
-            <CardDescription>Gerado pela API de Relatórios</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <pre className="whitespace-pre-wrap text-sm text-foreground">{reportMarkdown}</pre>
-          </CardContent>
-        </Card>
+        <ReportRenderer markdown={reportMarkdown} />
       )}
     </div>
   );

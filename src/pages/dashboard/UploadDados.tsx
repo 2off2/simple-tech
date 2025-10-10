@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiService } from "@/lib/api";
+import { ReportRenderer } from "@/components/ReportRenderer";
 interface UploadDadosProps {
   onUploadSuccess?: () => void;
 }
@@ -264,15 +265,13 @@ export function UploadDados({
         </div>}
 
       {/* Relatório */}
-      {reportMarkdown && <div className="max-w-4xl mx-auto">
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle className="text-foreground">Relatório Executivo</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <pre className="whitespace-pre-wrap text-sm text-foreground">{reportMarkdown}</pre>
-            </CardContent>
-          </Card>
-        </div>}
+      {reportMarkdown && (
+        <div className="max-w-4xl mx-auto">
+          <ReportRenderer 
+            markdown={reportMarkdown}
+            description="Análise dos dados enviados"
+          />
+        </div>
+      )}
     </div>;
 }
