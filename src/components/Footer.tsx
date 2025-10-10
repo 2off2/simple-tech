@@ -10,8 +10,7 @@ const Footer = () => {
               <img src="/lovable-uploads/46ca89a7-72fc-479a-bd07-4512df57ce75.png" alt="Simple.Tech Logo" className="h-8 w-auto" />
             </div>
             <p className="text-muted-foreground leading-relaxed">
-              Democratizando o acesso à inteligência artificial através de soluções 
-              simples e poderosas para análise de risco.
+              Facilitando sua gestão através de soluções poderosas de maneira simples.
             </p>
           </div>
 
