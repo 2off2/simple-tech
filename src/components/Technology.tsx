@@ -3,22 +3,18 @@ import { Network, Brain, FileSpreadsheet, LayoutDashboard } from "lucide-react";
 
 const Technology = () => {
   const techStack = [{
-    category: "",
     icon: Network,
     title: "Simulações Monte Carlo",
     description: "Cálculos estatísticos que projetam resultados financeiros sob diferentes cenários."
   }, {
-    category: "Dados & IA",
     icon: Brain,
     title: "Modelos Preditivos",
     description: "Algoritmos de aprendizado de máquina ajustados para prever receitas, custos e fluxo de caixa."
   }, {
-    category: "Conectividade",
     icon: FileSpreadsheet,
     title: "Integração Excel/CSV",
     description: "Importação simples e segura dos dados contábeis e financeiros."
   }, {
-    category: "Visualização",
     icon: LayoutDashboard,
     title: "Painéis Interativos",
     description: "Dashboards modernos com gráficos dinâmicos e responsivos."
