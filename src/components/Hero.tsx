@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Brain, Shield, Zap } from "lucide-react";
+import { ArrowRight, Brain, Eye, Zap } from "lucide-react";
 
 const Hero = () => {
   return (
@@ -60,7 +60,7 @@ const Hero = () => {
             </div>
 
             <div className="bg-card rounded-xl p-6 shadow-card border border-border hover:shadow-simple transition-all duration-300 hover:-translate-y-1">
-              <Shield className="h-8 w-8 text-primary mb-4 mx-auto" />
+              <Eye className="h-8 w-8 text-primary mb-4 mx-auto" />
               <h3 className="font-semibold text-foreground mb-2">Clareza Financeira </h3>
               <p className="text-sm text-muted-foreground">Visualize facilmente entradas, saídas e riscos.  </p>
             </div>
