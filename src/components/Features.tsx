@@ -17,12 +17,12 @@ const Features = () => {
     description: "Simule novos financiamentos e veja como afetam o caixa e o risco do negócio.",
     color: "text-primary"
   }, {
-    icon: Users,
+    icon: Table,
     title: "Relatórios Inteligentes",
     description: "Gere relatórios automáticos e exporte para Excel ou CSV.",
     color: "text-primary"
   }, {
-    icon: Table,
+    icon: Globe,
     title: "Integração com Planilhas",
     description: "Conecte seus dados em segundos, sem configurações complexas.",
     color: "text-primary"
