@@ -22,7 +22,7 @@ const Features = () => {
     description: "Gere relatórios automáticos e exporte para Excel ou CSV.",
     color: "text-primary"
   }, {
-    icon: Globe,
+    icon: Table,
     title: "Integração com Planilhas",
     description: "Conecte seus dados em segundos, sem configurações complexas.",
     color: "text-primary"

@@ -43,9 +43,6 @@ const Technology = () => {
                   <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4 mx-auto group-hover:bg-primary/20 transition-colors">
                     <IconComponent className="h-8 w-8 text-primary group-hover:scale-110 transition-transform" />
                   </div>
-                  <p className="text-sm font-medium text-muted-foreground mb-2">
-                    {tech.category}
-                  </p>
                   <CardTitle className="text-xl font-bold text-foreground group-hover:text-primary transition-colors">
                     {tech.title}
                   </CardTitle>
