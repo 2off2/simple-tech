@@ -1,5 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart3, Coins, FileText, Table, Lightbulb, LineChart, Users } from "lucide-react";
+import { BarChart3, Coins, FileBarChart, Sheet, Lightbulb, LineChart, Users } from "lucide-react";
 const Features = () => {
   const features = [{
     icon: BarChart3,
@@ -17,12 +17,12 @@ const Features = () => {
     description: "Simule novos financiamentos e veja como afetam o caixa e o risco do negócio.",
     color: "text-primary"
   }, {
-    icon: Table,
+    icon: FileBarChart,
     title: "Relatórios Inteligentes",
     description: "Gere relatórios automáticos e exporte para Excel ou CSV.",
     color: "text-primary"
   }, {
-    icon: Table,
+    icon: Sheet,
     title: "Integração com Planilhas",
     description: "Conecte seus dados em segundos, sem configurações complexas.",
     color: "text-primary"
