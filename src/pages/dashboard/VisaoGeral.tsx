@@ -100,9 +100,9 @@ export function VisaoGeral() {
 
       // 2. Buscar dados específicos para os gráficos usando os novos endpoints
       try {
-        // Evolução do saldo
-        const balanceEvolution = await apiService.getBalanceEvolution();
-        console.log('🔍 [DEBUG] Evolução do saldo recebida:', balanceEvolution);
+        // Evolução do saldo (versão simplificada para evitar confusão visual)
+        const balanceEvolution = await apiService.getBalanceEvolutionSimple();
+        console.log('🔍 [DEBUG] Evolução do saldo simplificada recebida:', balanceEvolution);
         
         // Dados mensais para entradas vs saídas
         const monthlySummary = await apiService.getMonthlySummary();
@@ -173,7 +173,7 @@ export function VisaoGeral() {
   const processChartDataFromAPI = (balanceEvolution: any[], monthlySummary: any[], yearlyMonthlyData: any[]) => {
     console.log('Processando dados dos novos endpoints...');
     
-    // Processar evolução do saldo
+    // Processar evolução do saldo (versão simplificada)
     const evolucaoSaldo = balanceEvolution.map(item => ({
       data: item.data,
       saldo: item.saldo

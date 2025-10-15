@@ -225,10 +225,20 @@ class ApiService {
     }
   }
 
-  // Evolução do saldo ao longo do tempo
+  // Evolução do saldo ao longo do tempo (versão filtrada)
   async getBalanceEvolution(): Promise<Array<{ data: string; saldo: number }>> {
     try {
       const { data } = await http.get(`/data/balance_evolution`);
+      return data as any;
+    } catch (error) {
+      this.extractErrorMessage(error);
+    }
+  }
+
+  // Evolução do saldo simplificada (semanal/mensal)
+  async getBalanceEvolutionSimple(): Promise<Array<{ data: string; saldo: number }>> {
+    try {
+      const { data } = await http.get(`/data/balance_evolution_simple`);
       return data as any;
     } catch (error) {
       this.extractErrorMessage(error);
