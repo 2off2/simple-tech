@@ -98,31 +98,39 @@ export function VisaoGeral() {
       console.log('🔍 [DEBUG] globalStats após processamento:', globalStatsCalculated);
       setGlobalStats(globalStatsCalculated);
 
-      // 2a. Buscar resumo mensal direto do backend (cobre todos os 12 meses)
+      // 2. Buscar dados específicos para os gráficos usando os novos endpoints
       try {
-        const monthly = await apiService.getMonthlySummary();
-        if (Array.isArray(monthly) && monthly.length > 0) {
-          console.log('[DEBUG] monthly_summary (backend):', monthly.slice(0, 12));
-        }
-      } catch (e) {
-        console.warn('monthly_summary indisponível, usando cálculo local.');
+        // Evolução do saldo
+        const balanceEvolution = await apiService.getBalanceEvolution();
+        console.log('🔍 [DEBUG] Evolução do saldo recebida:', balanceEvolution);
+        
+        // Dados mensais para entradas vs saídas
+        const monthlySummary = await apiService.getMonthlySummary();
+        console.log('🔍 [DEBUG] Resumo mensal recebido:', monthlySummary);
+        
+        // Dados mensais por ano
+        const yearlyMonthlyData = await apiService.getYearlyMonthlyData();
+        console.log('🔍 [DEBUG] Dados mensais por ano recebidos:', yearlyMonthlyData);
+        
+        // Processar dados para os gráficos
+        processChartDataFromAPI(balanceEvolution, monthlySummary, yearlyMonthlyData);
+        
+      } catch (apiError) {
+        console.warn('Erro ao buscar dados específicos da API, usando método fallback:', apiError);
+        // Fallback para o método antigo se os novos endpoints falharem
+        await fetchDataFallback();
       }
 
-      // 2b. Buscar dados do período (para gráficos e KPIs do período)
-      console.log('Buscando dados do período:', { from: dateRange.from, to: dateRange.to });
+      // 3. Buscar dados do período para KPIs (usando método antigo como fallback)
+      console.log('Buscando dados do período para KPIs:', { from: dateRange.from, to: dateRange.to });
       const periodData = await apiService.viewProcessed({
         start_date: dateRange.from,
         end_date: dateRange.to,
         order: 'asc',
-        // sem limite para pegar todos os registros e consolidar 12 meses corretamente
+        limit: 1000 // Limite razoável para KPIs
       } as any);
-      console.log('Dados do período recebidos:', periodData);
 
       if (periodData && periodData.length > 0) {
-        // Debug: verificar estrutura dos dados
-        console.log('Primeiros 5 registros do período:', periodData.slice(0, 5));
-        console.log('Campos disponíveis no primeiro registro:', Object.keys(periodData[0] || {}));
-        
         // Calcular KPIs do período
         const totalEntradas = periodData.reduce((sum, item) => {
           const valor = Number(item.entrada) || 0;
@@ -134,36 +142,13 @@ export function VisaoGeral() {
           return sum + valor;
         }, 0);
         
-        console.log('Dados do período processados:', {
-          totalEntradas,
-          totalSaidas,
-          fluxoLiquido: totalEntradas - totalSaidas,
-          totalRegistros: periodData.length
-        });
-        
-        // Debug específico para saídas
-        const saidasMaioresQueZero = periodData.filter(item => (Number(item.saida) || 0) > 0);
-        console.log('Transações com saída > 0:', saidasMaioresQueZero.length);
-        if (saidasMaioresQueZero.length > 0) {
-          console.log('Exemplo de transação com saída:', saidasMaioresQueZero[0]);
-        }
-        
         setPeriodStats({
           totalEntradas,
           totalSaidas,
           fluxoLiquido: totalEntradas - totalSaidas
         });
-
-        // Processar dados para gráficos
-        processChartData(periodData);
-        
-        // Processar dados mensais (usa dados do período; para garantir 12 meses, o backend monthly_summary já está sendo consumido acima)
-        processMonthlyData(periodData);
       } else {
-        console.log('Nenhum dado encontrado para o período');
         setPeriodStats({ totalEntradas: 0, totalSaidas: 0, fluxoLiquido: 0 });
-        setChartData({ evolucaoSaldo: [], entradasSaidas: [] });
-        setMonthlyData([]);
       }
 
       // 3. Buscar transações recentes (últimas 50, sem filtro de data)
@@ -183,6 +168,33 @@ export function VisaoGeral() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const processChartDataFromAPI = (balanceEvolution: any[], monthlySummary: any[], yearlyMonthlyData: any[]) => {
+    console.log('Processando dados dos novos endpoints...');
+    
+    // Processar evolução do saldo
+    const evolucaoSaldo = balanceEvolution.map(item => ({
+      data: item.data,
+      saldo: item.saldo
+    }));
+    
+    // Processar entradas vs saídas mensais
+    const entradasSaidas = monthlySummary.map(item => ({
+      mes: item.ano_mes,
+      entradas: item.entrada,
+      saidas: item.saida
+    }));
+    
+    console.log('Evolução do saldo processada:', evolucaoSaldo.length, 'pontos');
+    console.log('Entradas vs Saídas processadas:', entradasSaidas.length, 'meses');
+    console.log('Primeiros pontos da evolução:', evolucaoSaldo.slice(0, 5));
+    console.log('Primeiros meses de entradas/saídas:', entradasSaidas.slice(0, 5));
+    
+    setChartData({ evolucaoSaldo, entradasSaidas });
+    
+    // Processar dados mensais por ano
+    processMonthlyDataFromAPI(yearlyMonthlyData);
   };
 
   const processChartData = (data: any[]) => {
@@ -220,6 +232,57 @@ export function VisaoGeral() {
     console.log('Primeiros pontos:', evolucaoSaldo.slice(0, 5));
 
     setChartData({ evolucaoSaldo, entradasSaidas });
+  };
+
+  const processMonthlyDataFromAPI = (yearlyMonthlyData: any[]) => {
+    console.log('Processando dados mensais por ano da API...');
+    
+    // Converter dados da API para o formato esperado
+    const monthlyData = yearlyMonthlyData.map(item => ({
+      ano: item.ano,
+      mes: item.mes,
+      mes_ano: item.mes_ano,
+      total_entradas: item.total_entradas,
+      total_saidas: item.total_saidas,
+      fluxo_liquido: item.fluxo_liquido,
+      saldo_final_mes: item.saldo_final_mes,
+      qtd_transacoes: 0, // Não disponível na API
+      ticket_medio: item.total_entradas > 0 ? item.total_entradas : 0 // Aproximação
+    }));
+    
+    // Extrair anos disponíveis
+    const yearsSet = new Set(monthlyData.map(item => item.ano));
+    const availableYears = Array.from(yearsSet).sort();
+    
+    console.log('Dados mensais processados:', monthlyData.length, 'meses');
+    console.log('Anos disponíveis:', availableYears);
+    
+    setMonthlyData(monthlyData);
+    setAvailableYears(availableYears);
+  };
+
+  const fetchDataFallback = async () => {
+    console.log('Usando método fallback para buscar dados...');
+    
+    // Buscar dados do período (método antigo)
+    const periodData = await apiService.viewProcessed({
+      start_date: dateRange.from,
+      end_date: dateRange.to,
+      order: 'asc',
+      limit: 1000
+    } as any);
+
+    if (periodData && periodData.length > 0) {
+      // Processar dados para gráficos
+      processChartData(periodData);
+      
+      // Processar dados mensais
+      processMonthlyData(periodData);
+    } else {
+      console.log('Nenhum dado encontrado para o período');
+      setChartData({ evolucaoSaldo: [], entradasSaidas: [] });
+      setMonthlyData([]);
+    }
   };
 
   const processMonthlyData = (data: any[]) => {

@@ -225,6 +225,34 @@ class ApiService {
     }
   }
 
+  // Evolução do saldo ao longo do tempo
+  async getBalanceEvolution(): Promise<Array<{ data: string; saldo: number }>> {
+    try {
+      const { data } = await http.get(`/data/balance_evolution`);
+      return data as any;
+    } catch (error) {
+      this.extractErrorMessage(error);
+    }
+  }
+
+  // Dados mensais agrupados por ano
+  async getYearlyMonthlyData(): Promise<Array<{ 
+    ano: number; 
+    mes: number; 
+    mes_ano: string; 
+    total_entradas: number; 
+    total_saidas: number; 
+    fluxo_liquido: number; 
+    saldo_final_mes: number 
+  }>> {
+    try {
+      const { data } = await http.get(`/data/yearly_monthly_data`);
+      return data as any;
+    } catch (error) {
+      this.extractErrorMessage(error);
+    }
+  }
+
   // Carregar dados do último bundle processado (fallback)
   async loadExcelBundle(limit: number = 50): Promise<ProcessedData[]> {
     try {
