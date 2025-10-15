@@ -186,16 +186,16 @@ export function VisaoGeral() {
   };
 
   const processChartData = (data: any[]) => {
-    // Agrupar por data para evolução do saldo
+    // Ordenar dados por data primeiro
+    const sortedData = [...data].sort((a, b) => a.data.localeCompare(b.data));
+    
+    // Agrupar por data para evolução do saldo - manter o último saldo de cada data
     const saldoPorData = new Map<string, number>();
     const entradasSaidasPorMes = new Map<string, { entradas: number; saidas: number }>();
 
-    data.forEach((item) => {
-      // Saldo por data
+    sortedData.forEach((item) => {
+      // Saldo por data - manter o último saldo de cada data única
       const dataStr = item.data;
-      if (!saldoPorData.has(dataStr)) {
-        saldoPorData.set(dataStr, 0);
-      }
       saldoPorData.set(dataStr, item.saldo || 0);
 
       // Entradas/Saídas por mês
@@ -208,14 +208,16 @@ export function VisaoGeral() {
       mesData.saidas += item.saida || 0;
     });
 
-    // Converter para array ordenado
+    // Converter para array - já está ordenado
     const evolucaoSaldo = Array.from(saldoPorData.entries())
-      .map(([data, saldo]) => ({ data, saldo }))
-      .sort((a, b) => a.data.localeCompare(b.data));
+      .map(([data, saldo]) => ({ data, saldo }));
 
     const entradasSaidas = Array.from(entradasSaidasPorMes.entries())
       .map(([mes, valores]) => ({ mes, ...valores }))
       .sort((a, b) => a.mes.localeCompare(b.mes));
+
+    console.log('Evolução do saldo processada:', evolucaoSaldo.length, 'pontos');
+    console.log('Primeiros pontos:', evolucaoSaldo.slice(0, 5));
 
     setChartData({ evolucaoSaldo, entradasSaidas });
   };
@@ -251,7 +253,9 @@ export function VisaoGeral() {
     const monthly: MonthlyData[] = [];
     
     // Para cada ano encontrado, garantir que todos os 12 meses existam
-    const anos = Array.from(yearsSet);
+    const anos = Array.from(yearsSet).sort();
+    
+    let saldoAcumulado = 0; // Manter saldo acumulado entre meses
     
     anos.forEach(ano => {
       // Criar entrada para todos os 12 meses
@@ -263,11 +267,17 @@ export function VisaoGeral() {
         const totalSaidas = items.reduce((sum, item) => sum + (item.saida || 0), 0);
         const fluxoLiquido = totalEntradas - totalSaidas;
         
-        // Saldo final do mês = último saldo do mês (ou 0 se não houver dados)
-        let saldoFinalMes = 0;
+        // Saldo final do mês
+        let saldoFinalMes = saldoAcumulado;
         if (items.length > 0) {
+          // Se há dados no mês, usar o último saldo registrado
           const sortedItems = [...items].sort((a, b) => a.data.localeCompare(b.data));
-          saldoFinalMes = sortedItems[sortedItems.length - 1]?.saldo || 0;
+          saldoFinalMes = sortedItems[sortedItems.length - 1]?.saldo || saldoAcumulado;
+          saldoAcumulado = saldoFinalMes;
+        } else {
+          // Se não há dados, aplicar o fluxo ao saldo anterior
+          saldoAcumulado += fluxoLiquido;
+          saldoFinalMes = saldoAcumulado;
         }
         
         const qtdTransacoes = items.length;
@@ -288,11 +298,7 @@ export function VisaoGeral() {
       }
     });
 
-    // Ordenar por ano/mês
-    monthly.sort((a, b) => {
-      if (a.ano !== b.ano) return a.ano - b.ano;
-      return a.mes - b.mes;
-    });
+    console.log('Dados mensais processados:', monthly.slice(0, 12));
 
     setMonthlyData(monthly);
     setAvailableYears(Array.from(yearsSet).sort());
