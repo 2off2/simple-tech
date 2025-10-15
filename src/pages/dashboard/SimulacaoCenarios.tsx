@@ -807,7 +807,17 @@ export function SimulacaoCenarios() {
                         <Accordion type="multiple" className="w-full">
                           {keyBusinessEvents.key_outflows.map((event, index) => {
                             console.log('Renderizando outflow:', event);
+                            console.log(`Outflow: ${event.name}, total_amount: ${event.total_amount}, type: ${typeof event.total_amount}`);
+                            
                             const modifier = outflowModifiers.get(event.name);
+                            
+                            // Garantir que total_amount é um número válido
+                            const displayAmount = typeof event.total_amount === 'number' 
+                              ? event.total_amount 
+                              : parseFloat(String(event.total_amount)) || 0;
+                            
+                            console.log(`Outflow: ${event.name}, displayAmount after validation: ${displayAmount}`);
+                            
                             return (
                         <AccordionItem key={index} value={`outflow-${index}`}>
                           <AccordionTrigger className="text-left">
@@ -816,7 +826,7 @@ export function SimulacaoCenarios() {
                           <AccordionContent className="space-y-4 pt-4">
                             <p className="text-sm text-muted-foreground mb-4">
                               Este é um dos seus principais custos, totalizando {''}
-                              <span className="font-bold text-destructive">{formatCurrency(event.total_amount)}</span>
+                              <span className="font-bold text-destructive">{formatCurrency(displayAmount)}</span>
                               {' '}em {event.frequency} pagamentos.
                             </p>
                             
