@@ -3,7 +3,7 @@
 import axios, { AxiosError, AxiosInstance } from 'axios';
 
 // URL base da API hospedada no Vercel
-export const RAW_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://simple-tech-kogdf99g5-jairs-projects-1526a6e6.vercel.app';
+export const RAW_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://simple-tech-ewcxrnhxs-jairs-projects-1526a6e6.vercel.app';
 const API_BASE_URL = `${RAW_BASE_URL}/api`;
 
 function createAxiosClient(): AxiosInstance {
