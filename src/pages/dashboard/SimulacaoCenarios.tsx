@@ -15,7 +15,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { Activity, TrendingUp, TrendingDown, AlertCircle, Trash2, Plus } from "lucide-react";
 import { ReportRenderer } from "@/components/ReportRenderer";
 import { useToast } from "@/hooks/use-toast";
-import { apiService, RAW_BASE_URL, BusinessEvent, EventModifier, BusinessEventSimulationRequest, LoanSuggestionsResponse, LoanSimulationRequest } from "@/lib/api";
+import { apiService, BusinessEvent, EventModifier, BusinessEventSimulationRequest, LoanSuggestionsResponse, LoanSimulationRequest } from "@/lib/api";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { formatCurrency } from '@/lib/utils';
 
@@ -289,7 +289,7 @@ export function SimulacaoCenarios() {
             scenario_type: scenario,
             seasonality_rules: seasonalityRules
           };
-          response = await fetch(`${RAW_BASE_URL}/api/simulations/scenario-simulation`, {
+          response = await fetch('http://localhost:8000/api/simulations/scenario-simulation', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
@@ -312,7 +312,7 @@ export function SimulacaoCenarios() {
 
         console.log("Enviando payload para simulação de eventos:", businessEventPayload);
         
-        response = await fetch(`${RAW_BASE_URL}/api/simulations/scenario-simulation`, {
+        response = await fetch('http://localhost:8000/api/simulations/scenario-simulation', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -334,7 +334,7 @@ export function SimulacaoCenarios() {
 
         console.log("Enviando payload para simulação de empréstimo:", loanPayload);
         
-        response = await fetch(`${RAW_BASE_URL}/api/simulations/scenario-simulation`, {
+        response = await fetch('http://localhost:8000/api/simulations/scenario-simulation', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -1252,9 +1252,9 @@ export function SimulacaoCenarios() {
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                <strong>API Offline:</strong> Não foi possível conectar com o servidor backend hospedado no Vercel.
+                <strong>API Offline:</strong> Não foi possível conectar com o servidor. Verifique se a API está rodando em http://localhost:8000.
                 <br />
-                Verifique se a API está disponível em: <code>{RAW_BASE_URL}</code>
+                <strong>Para iniciar a API:</strong> Execute o comando no terminal do backend: <code>python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000</code>
               </AlertDescription>
             </Alert>
           )}

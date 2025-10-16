@@ -4,12 +4,12 @@ console.log('=== TESTE FRONTEND DEBUG ===');
 async function testFrontendDebug() {
   try {
     console.log('1. Testando API de estatísticas...');
-    const statsResponse = await fetch('https://simple-tech-kogdf99g5-jairs-projects-1526a6e6.vercel.app/api/data/statistics');
+    const statsResponse = await fetch('http://localhost:8000/api/data/statistics');
     const stats = await statsResponse.json();
     console.log('Estatísticas:', stats);
     
     console.log('\n2. Testando API de dados processados (como o frontend faz)...');
-    const dataResponse = await fetch('https://simple-tech-kogdf99g5-jairs-projects-1526a6e6.vercel.app/api/data/view_processed?start_date=1900-01-01&end_date=2100-12-31&order=asc&limit=5000');
+    const dataResponse = await fetch('http://localhost:8000/api/data/view_processed?start_date=1900-01-01&end_date=2100-12-31&order=asc&limit=5000');
     const data = await dataResponse.json();
     console.log('Dados processados (filtrados):', data);
     

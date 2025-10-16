@@ -3,9 +3,8 @@ import { useDropzone } from "react-dropzone";
 import { Upload, FileText, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { RAW_BASE_URL } from "@/lib/api";
+import { apiService } from "@/lib/api";
 import { ReportRenderer } from "@/components/ReportRenderer";
 interface UploadDadosProps {
   onUploadSuccess?: () => void;
@@ -16,8 +15,6 @@ export function UploadDados({
   const [inputFiles, setInputFiles] = useState<File[]>([]);
   const [outputFiles, setOutputFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploadStatus, setUploadStatus] = useState("");
   const [reportLoading, setReportLoading] = useState(false);
   const [reportMarkdown, setReportMarkdown] = useState<string | null>(null);
   const {
@@ -80,7 +77,6 @@ export function UploadDados({
     multiple: true
   });
   const handleAnalyze = async () => {
-    // Verificação inicial
     if (inputFiles.length === 0 && outputFiles.length === 0) {
       toast({
         title: "Erro",
@@ -89,79 +85,23 @@ export function UploadDados({
       });
       return;
     }
-
-    // Iniciar upload
     setUploading(true);
-    setUploadProgress(0);
-    setUploadStatus("Iniciando upload...");
-
-    const filesToSend: File[] = [...inputFiles, ...outputFiles];
-    const totalFiles = filesToSend.length;
-    const hasOutflow = outputFiles.length > 0;
-
     try {
-      // Loop para enviar arquivos individualmente
-      for (let i = 0; i < filesToSend.length; i++) {
-        const file = filesToSend[i];
-        const fileNumber = i + 1;
-        
-        setUploadStatus(`A enviar ${fileNumber} de ${totalFiles}: ${file.name}`);
-
-        // Criar FormData para envio individual
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('has_outflow', hasOutflow.toString());
-
-        try {
-          // Envio individual via fetch
-          const response = await fetch(`${RAW_BASE_URL}/api/upload-excel-bundle-multi`, {
-            method: 'POST',
-            body: formData,
-          });
-
-          if (!response.ok) {
-            throw new Error(`Erro no upload de ${file.name}: ${response.statusText}`);
-          }
-
-          // Atualizar progresso
-          const progress = Math.round(((fileNumber) / totalFiles) * 100);
-          setUploadProgress(progress);
-          
-        } catch (fileError) {
-          // Gestão de erros individuais
-          const errorMsg = fileError instanceof Error ? fileError.message : "Erro desconhecido";
-          setUploadStatus(`Erro no ficheiro ${file.name}: ${errorMsg}`);
-          
-          toast({
-            title: "Erro no upload",
-            description: `Falha ao enviar ${file.name}. ${errorMsg}`,
-            variant: "destructive"
-          });
-          
-          throw fileError; // Interromper o loop
-        }
-      }
-
-      // Finalizar com sucesso
-      setUploadStatus("Concluído! Todos os arquivos foram enviados com sucesso.");
-      setUploadProgress(100);
-      
+      // Prioridade: se houver arquivos de entrada, eles já podem conter saídas.
+      // Envie todos os selecionados; o backend aceita múltiplos via campo 'files'.
+      const filesToSend: File[] = [...inputFiles, ...outputFiles];
+      const hasOutflow = outputFiles.length > 0;
+      await apiService.uploadExcelBundleMulti(filesToSend, hasOutflow);
       toast({
         title: "Sucesso!",
         description: "Arquivos enviados e processados com sucesso."
       });
-      
       console.log('Disparando evento data-updated...');
       window.dispatchEvent(new Event('data-updated'));
       console.log('Evento data-updated disparado!');
-      
       onUploadSuccess?.();
-      
     } catch (error) {
       console.error('Erro no upload:', error);
-      const errorMsg = error instanceof Error ? error.message : "Erro desconhecido";
-      setUploadStatus(`Erro: ${errorMsg}`);
-      
       toast({
         title: "Erro",
         description: "Erro ao processar os arquivos. Verifique se os arquivos estão no formato correto.",
@@ -179,26 +119,11 @@ export function UploadDados({
         outputFiles: outputFiles.map(f => f.name),
         totalArquivos: inputFiles.length + outputFiles.length
       };
-      
-      // Usar fetch direto ao invés de apiService
-      const response = await fetch(`${RAW_BASE_URL}/api/generate-report`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          page: "UploadDados",
-          context
-        })
+      const res = await apiService.generateReport({
+        page: "UploadDados",
+        context
       });
-
-      if (!response.ok) {
-        throw new Error(`Erro ao gerar relatório: ${response.statusText}`);
-      }
-
-      const res = await response.json();
       setReportMarkdown(res.report_markdown);
-      
       toast({
         title: "Relatório gerado"
       });
@@ -235,10 +160,9 @@ export function UploadDados({
           <CardContent>
             <div {...inputDropzone.getRootProps()} className={`
                 border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors
-                ${uploading ? 'opacity-50 pointer-events-none' : ''}
                 ${inputDropzone.isDragActive ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}
               `}>
-              <input {...inputDropzone.getInputProps()} disabled={uploading} />
+              <input {...inputDropzone.getInputProps()} />
               <div className="flex flex-col items-center gap-4">
                 <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
                   <Upload className="h-8 w-8 text-primary" />
@@ -294,10 +218,9 @@ export function UploadDados({
           <CardContent>
             <div {...outputDropzone.getRootProps()} className={`
                 border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors
-                ${uploading ? 'opacity-50 pointer-events-none' : ''}
                 ${outputDropzone.isDragActive ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}
               `}>
-              <input {...outputDropzone.getInputProps()} disabled={uploading} />
+              <input {...outputDropzone.getInputProps()} />
               <div className="flex flex-col items-center gap-4">
                 <div className="w-16 h-16 bg-muted/10 rounded-full flex items-center justify-center">
                   <Upload className="h-8 w-8 text-muted-foreground" />
@@ -333,28 +256,6 @@ export function UploadDados({
           </CardContent>
         </Card>
       </div>
-
-      {/* Feedback de Upload */}
-      {uploading && (
-        <div className="max-w-4xl mx-auto space-y-4 p-6 bg-muted/30 rounded-lg border">
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-foreground font-medium">{uploadStatus}</span>
-              <span className="text-muted-foreground">{uploadProgress}%</span>
-            </div>
-            <Progress value={uploadProgress} className="h-2" />
-          </div>
-        </div>
-      )}
-
-      {/* Status Final */}
-      {!uploading && uploadStatus && uploadProgress === 100 && (
-        <div className="max-w-4xl mx-auto p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
-          <p className="text-sm text-green-700 dark:text-green-400 font-medium">
-            ✓ {uploadStatus}
-          </p>
-        </div>
-      )}
 
       {/* Action Button */}
       {(inputFiles.length > 0 || outputFiles.length > 0) && <div className="flex justify-center">
